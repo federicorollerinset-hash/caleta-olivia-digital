@@ -179,11 +179,11 @@ button, input, select, textarea{ font-family:inherit; }
     <p>Ingresá con tu cuenta para cargar o gestionar notas.</p>
     <div class="campo">
       <label>Email</label>
-      <input type="email" id="login-email" placeholder="tu@caletaoliviadigital.com">
+      <input type="email" id="login-email" placeholder="tu@caletaoliviadigital.com" autocomplete="username">
     </div>
     <div class="campo">
       <label>Contraseña</label>
-      <input type="password" id="login-pass" placeholder="••••••••">
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
     </div>
     <div class="campo" id="login-error" style="color:#C4382E; font-size:13px; display:none;"></div>
     <button class="btn-primario" onclick="entrar()">Ingresar</button>
@@ -353,6 +353,11 @@ async function entrar(){
     return;
   }
 
+  localStorage.setItem('co_digital_sesion', JSON.stringify(data));
+  mostrarPanel(data);
+}
+
+function mostrarPanel(data){
   usuarioActual = data;
   document.getElementById('pantalla-login').style.display = 'none';
   document.getElementById('pantalla-panel').style.display = 'block';
@@ -383,11 +388,21 @@ async function entrar(){
 
 function salir(){
   usuarioActual = null;
+  localStorage.removeItem('co_digital_sesion');
   document.getElementById('pantalla-panel').style.display = 'none';
   document.getElementById('pantalla-login').style.display = 'flex';
   document.getElementById('login-email').value = '';
   document.getElementById('login-pass').value = '';
 }
+
+// --- si ya había una sesión guardada en este navegador, entra directo sin pedir login ---
+(function autoLogin(){
+  const guardado = localStorage.getItem('co_digital_sesion');
+  if(guardado){
+    try{ mostrarPanel(JSON.parse(guardado)); }
+    catch(e){ localStorage.removeItem('co_digital_sesion'); }
+  }
+})();
 
 document.querySelectorAll('.panel-nav a').forEach(link => {
   link.addEventListener('click', () => {
@@ -397,6 +412,7 @@ document.querySelectorAll('.panel-nav a').forEach(link => {
     document.getElementById(link.dataset.vista).classList.add('activa');
   });
 });
+
 
 // --- subir imagen a Cloudflare R2 (vía Worker) y devolver la URL pública ---
 async function subirImagen(archivo){
