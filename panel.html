@@ -179,22 +179,14 @@ button, input, select, textarea{ font-family:inherit; }
     <p>Ingresá con tu cuenta para cargar o gestionar notas.</p>
     <div class="campo">
       <label>Email</label>
-      <input type="email" id="login-email" placeholder="redactor@caletaoliviadigital.com">
+      <input type="email" id="login-email" placeholder="tu@caletaoliviadigital.com">
     </div>
     <div class="campo">
       <label>Contraseña</label>
       <input type="password" id="login-pass" placeholder="••••••••">
     </div>
-    <div class="campo">
-      <label>Rol (demo — luego lo define Supabase automáticamente)</label>
-      <select id="login-rol">
-        <option value="redactor">Redactor</option>
-        <option value="editor">Editor</option>
-        <option value="admin">Admin</option>
-      </select>
-    </div>
+    <div class="campo" id="login-error" style="color:#C4382E; font-size:13px; display:none;"></div>
     <button class="btn-primario" onclick="entrar()">Ingresar</button>
-    <div class="nota-demo">Vista de demostración — cuando conectemos Supabase, el rol se lee de la base y no se elige acá.</div>
   </div>
 </div>
 
@@ -228,29 +220,31 @@ button, input, select, textarea{ font-family:inherit; }
         <div class="form-nota">
           <div class="campo">
             <label>Título</label>
-            <input type="text" placeholder="Título de la noticia">
+            <input type="text" id="f-titulo" placeholder="Título de la noticia">
           </div>
           <div class="fila">
             <div class="campo">
               <label>Categoría</label>
-              <select><option>Política</option><option>Sociedad</option><option>Economía</option><option>Deportes</option><option>Cultura</option><option>Policiales</option></select>
+              <select id="f-categoria"><option>Política</option><option>Sociedad</option><option>Economía</option><option>Deportes</option><option>Cultura</option><option>Policiales</option></select>
             </div>
             <div class="campo">
               <label>Bajada</label>
-              <input type="text" placeholder="Resumen breve de la nota">
+              <input type="text" id="f-bajada" placeholder="Resumen breve de la nota">
             </div>
           </div>
           <div class="campo">
             <label>Imagen principal</label>
-            <div class="upload-box">Arrastrá una imagen o hacé clic para subirla</div>
+            <div class="upload-box" onclick="document.getElementById('f-imagen').click()" id="upload-box-txt">Arrastrá una imagen o hacé clic para subirla</div>
+            <input type="file" id="f-imagen" accept="image/*" style="display:none;">
           </div>
           <div class="campo">
             <label>Cuerpo de la nota</label>
-            <textarea placeholder="Escribí el contenido completo acá..."></textarea>
+            <textarea id="f-cuerpo" placeholder="Escribí el contenido completo acá..."></textarea>
           </div>
+          <div class="campo" id="form-msg" style="display:none; font-size:13px;"></div>
           <div class="acciones-form">
-            <button class="btn-secundario">Guardar borrador</button>
-            <button class="btn-enviar">Enviar a revisión</button>
+            <button class="btn-secundario" onclick="guardarNota('borrador')">Guardar borrador</button>
+            <button class="btn-enviar" onclick="guardarNota('pendiente')">Enviar a revisión</button>
           </div>
         </div>
       </section>
@@ -259,110 +253,78 @@ button, input, select, textarea{ font-family:inherit; }
       <section class="vista" id="v-mis-notas">
         <h2>Mis notas</h2>
         <p class="subt">Notas que cargaste, con su estado actual.</p>
-        <div class="tabla-notas">
-          <div class="fila-nota">
-            <div class="miniatura"></div>
-            <div class="info"><div class="titulo">Aumentó el boleto de colectivo urbano en Caleta Olivia</div><div class="meta">Política · cargada hoy 09:12</div></div>
-            <span class="estado-badge estado-pendiente">Pendiente</span>
-          </div>
-          <div class="fila-nota">
-            <div class="miniatura"></div>
-            <div class="info"><div class="titulo">Se viene el clásico regional de handball en el estadio municipal</div><div class="meta">Deportes · cargada ayer 18:40</div></div>
-            <span class="estado-badge estado-publicada">Publicada</span>
-          </div>
-          <div class="fila-nota">
-            <div class="miniatura"></div>
-            <div class="info"><div class="titulo">Borrador sin terminar sobre el nuevo paseo costero</div><div class="meta">Sociedad · sin enviar</div></div>
-            <span class="estado-badge estado-borrador">Borrador</span>
-          </div>
-        </div>
+        <div class="tabla-notas" id="lista-mis-notas"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
       </section>
 
       <!-- PENDIENTES (editor/admin) -->
       <section class="vista" id="v-pendientes">
         <h2>Pendientes de revisión</h2>
         <p class="subt">Notas enviadas por redactores, esperando aprobación.</p>
-        <div class="tabla-notas">
-          <div class="fila-nota">
-            <div class="miniatura"></div>
-            <div class="info"><div class="titulo">Aumentó el boleto de colectivo urbano en Caleta Olivia</div><div class="meta">Política · por Federico · hoy 09:12</div></div>
-            <div class="acciones-fila">
-              <button class="btn-editar">Editar</button>
-              <button class="btn-rechazar">Rechazar</button>
-              <button class="btn-aprobar">Aprobar y publicar</button>
-            </div>
-          </div>
-          <div class="fila-nota">
-            <div class="miniatura"></div>
-            <div class="info"><div class="titulo">Vecinos reclaman por el estado de la ruta 3 a la altura del acceso norte</div><div class="meta">Sociedad · por Marina · hoy 08:30</div></div>
-            <div class="acciones-fila">
-              <button class="btn-editar">Editar</button>
-              <button class="btn-rechazar">Rechazar</button>
-              <button class="btn-aprobar">Aprobar y publicar</button>
-            </div>
-          </div>
-        </div>
+        <div class="tabla-notas" id="lista-pendientes"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
       </section>
 
       <!-- PUBLICADAS -->
       <section class="vista" id="v-publicadas">
         <h2>Publicadas</h2>
         <p class="subt">Notas ya visibles en la portada del sitio.</p>
-        <div class="tabla-notas">
-          <div class="fila-nota">
-            <div class="miniatura"></div>
-            <div class="info"><div class="titulo">Se viene el clásico regional de handball en el estadio municipal</div><div class="meta">Deportes · publicada ayer 19:05</div></div>
-            <div class="acciones-fila">
-              <button class="btn-editar">Editar</button>
-            </div>
-          </div>
-          <div class="fila-nota">
-            <div class="miniatura"></div>
-            <div class="info"><div class="titulo">La comuna confirmó el cronograma de recolección para el fin de semana largo</div><div class="meta">Sociedad · publicada hace 2 días</div></div>
-            <div class="acciones-fila">
-              <button class="btn-editar">Editar</button>
-            </div>
-          </div>
-        </div>
+        <div class="tabla-notas" id="lista-publicadas"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
       </section>
 
       <!-- USUARIOS (solo admin) -->
       <section class="vista" id="v-usuarios">
         <h2>Usuarios</h2>
         <p class="subt">Gestión de cuentas del panel: quién puede cargar y quién puede aprobar.</p>
-        <div class="tarjetas-stats">
-          <div class="stat-card"><div class="num">3</div><div class="lbl">Redactores</div></div>
-          <div class="stat-card"><div class="num">1</div><div class="lbl">Editores</div></div>
-          <div class="stat-card"><div class="num">1</div><div class="lbl">Admins</div></div>
-        </div>
-        <div class="tabla-usuarios">
-          <div class="fila-usuario">
-            <div class="avatar-inicial">F</div>
-            <div class="info"><div class="nombre">Federico</div><div class="email">admin — federico@caletaoliviadigital.com</div></div>
-            <div class="acciones-fila"><button class="btn-editar">Editar</button></div>
-          </div>
-          <div class="fila-usuario">
-            <div class="avatar-inicial">M</div>
-            <div class="info"><div class="nombre">Marina</div><div class="email">editora — marina@caletaoliviadigital.com</div></div>
-            <div class="acciones-fila"><button class="btn-editar">Editar</button></div>
-          </div>
-          <div class="fila-usuario">
-            <div class="avatar-inicial">L</div>
-            <div class="info"><div class="nombre">Lucas</div><div class="email">redactor — lucas@caletaoliviadigital.com</div></div>
-            <div class="acciones-fila"><button class="btn-editar">Editar</button></div>
-          </div>
-        </div>
+        <div class="tarjetas-stats" id="stats-usuarios"></div>
+        <div class="tabla-usuarios" id="lista-usuarios"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
       </section>
 
     </main>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-function entrar(){
-  const rol = document.getElementById('login-rol').value;
+const SUPABASE_URL = 'https://rmbutukkldktjknvhizj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_HJbQIiqaB6MGWnfTq0GlHw_dDO7tbAe';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let usuarioActual = null; // { id, nombre, email, rol }
+
+async function sha256(texto){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function entrar(){
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const errBox = document.getElementById('login-error');
+  errBox.style.display = 'none';
+
+  if(!email || !pass){
+    errBox.textContent = 'Completá email y contraseña.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  const hash = await sha256(pass);
+  const { data, error } = await sb.from('usuarios')
+    .select('*')
+    .eq('email', email)
+    .eq('password_hash', hash)
+    .eq('activo', true)
+    .maybeSingle();
+
+  if(error || !data){
+    errBox.textContent = 'Email o contraseña incorrectos.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  usuarioActual = data;
   document.getElementById('pantalla-login').style.display = 'none';
   document.getElementById('pantalla-panel').style.display = 'block';
+  document.getElementById('nombre-usuario').textContent = data.nombre;
 
   const badge = document.getElementById('rol-badge');
   const navPendientes = document.getElementById('nav-pendientes');
@@ -370,27 +332,31 @@ function entrar(){
   const separador = document.getElementById('separador-admin');
 
   badge.classList.remove('rol-admin','rol-editor','rol-redactor');
-  if(rol === 'admin'){
+  if(data.rol === 'admin'){
     badge.textContent = 'Admin'; badge.classList.add('rol-admin');
-    navPendientes.style.display = 'flex';
-    navUsuarios.style.display = 'flex';
-    separador.style.display = 'block';
-  } else if(rol === 'editor'){
+    navPendientes.style.display = 'flex'; navUsuarios.style.display = 'flex'; separador.style.display = 'block';
+  } else if(data.rol === 'editor'){
     badge.textContent = 'Editor'; badge.classList.add('rol-editor');
-    navPendientes.style.display = 'flex';
-    navUsuarios.style.display = 'none';
-    separador.style.display = 'none';
+    navPendientes.style.display = 'flex'; navUsuarios.style.display = 'none'; separador.style.display = 'none';
   } else {
     badge.textContent = 'Redactor'; badge.classList.add('rol-redactor');
-    navPendientes.style.display = 'none';
-    navUsuarios.style.display = 'none';
-    separador.style.display = 'none';
+    navPendientes.style.display = 'none'; navUsuarios.style.display = 'none'; separador.style.display = 'none';
   }
+
+  cargarMisNotas();
+  cargarPublicadas();
+  if(data.rol !== 'redactor') cargarPendientes();
+  if(data.rol === 'admin') cargarUsuarios();
 }
+
 function salir(){
+  usuarioActual = null;
   document.getElementById('pantalla-panel').style.display = 'none';
   document.getElementById('pantalla-login').style.display = 'flex';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
 }
+
 document.querySelectorAll('.panel-nav a').forEach(link => {
   link.addEventListener('click', () => {
     document.querySelectorAll('.panel-nav a').forEach(a => a.classList.remove('activa'));
@@ -399,6 +365,154 @@ document.querySelectorAll('.panel-nav a').forEach(link => {
     document.getElementById(link.dataset.vista).classList.add('activa');
   });
 });
+
+// --- subir imagen a Cloudflare R2 (vía Worker) y devolver la URL pública ---
+async function subirImagen(archivo){
+  if(!archivo) return null;
+  const formData = new FormData();
+  formData.append('file', archivo);
+  const resp = await fetch('/api/subir-imagen', { method:'POST', body: formData });
+  if(!resp.ok) throw new Error('No se pudo subir la imagen');
+  const data = await resp.json();
+  return data.url;
+}
+
+// --- cargar nota (borrador o pendiente) ---
+async function guardarNota(estadoDestino){
+  const titulo = document.getElementById('f-titulo').value.trim();
+  const bajada = document.getElementById('f-bajada').value.trim();
+  const categoria = document.getElementById('f-categoria').value;
+  const cuerpo = document.getElementById('f-cuerpo').value.trim();
+  const archivoImg = document.getElementById('f-imagen').files[0];
+  const msg = document.getElementById('form-msg');
+
+  if(!titulo || !cuerpo){
+    msg.style.display = 'block'; msg.style.color = '#C4382E';
+    msg.textContent = 'Falta el título o el cuerpo de la nota.';
+    return;
+  }
+
+  msg.style.display = 'block'; msg.style.color = 'var(--ink-soft)';
+  msg.textContent = 'Guardando...';
+
+  let imagen_url = null;
+  try{
+    if(archivoImg) imagen_url = await subirImagen(archivoImg);
+  }catch(e){
+    msg.style.color = '#C4382E';
+    msg.textContent = 'La nota no se guardó: falló la subida de la imagen (¿ya está conectado el endpoint de R2?).';
+    return;
+  }
+
+  const { error } = await sb.from('notas').insert({
+    titulo, bajada, categoria, cuerpo, imagen_url,
+    estado: estadoDestino,
+    autor_id: usuarioActual.id,
+    autor_nombre: usuarioActual.nombre
+  });
+
+  if(error){
+    msg.style.color = '#C4382E';
+    msg.textContent = 'Error al guardar: ' + error.message;
+    return;
+  }
+
+  msg.style.color = '#1F9254';
+  msg.textContent = estadoDestino === 'pendiente' ? 'Nota enviada a revisión.' : 'Borrador guardado.';
+  document.getElementById('f-titulo').value = '';
+  document.getElementById('f-bajada').value = '';
+  document.getElementById('f-cuerpo').value = '';
+  document.getElementById('f-imagen').value = '';
+  document.getElementById('upload-box-txt').textContent = 'Arrastrá una imagen o hacé clic para subirla';
+  cargarMisNotas();
+}
+
+document.getElementById('f-imagen').addEventListener('change', (e) => {
+  const nombre = e.target.files[0]?.name;
+  if(nombre) document.getElementById('upload-box-txt').textContent = '✓ ' + nombre;
+});
+
+// --- listados ---
+function badgeEstado(estado){
+  const mapa = { pendiente:['Pendiente','estado-pendiente'], publicada:['Publicada','estado-publicada'], borrador:['Borrador','estado-borrador'], rechazada:['Rechazada','estado-borrador'] };
+  const [txt, clase] = mapa[estado] || [estado, 'estado-borrador'];
+  return `<span class="estado-badge ${clase}">${txt}</span>`;
+}
+function tiempoDesde(fechaIso){
+  const f = new Date(fechaIso);
+  return f.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit'}) + ' ' + f.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+}
+
+async function cargarMisNotas(){
+  const cont = document.getElementById('lista-mis-notas');
+  const { data, error } = await sb.from('notas').select('*').eq('autor_id', usuarioActual.id).order('created_at', {ascending:false});
+  if(error || !data || data.length === 0){ cont.innerHTML = '<div style="padding:20px; color:var(--ink-soft); font-size:13px;">Todavía no cargaste notas.</div>'; return; }
+  cont.innerHTML = data.map(n => `
+    <div class="fila-nota">
+      <div class="miniatura" style="${n.imagen_url ? `background-image:url('${n.imagen_url}'); background-size:cover;` : ''}"></div>
+      <div class="info"><div class="titulo">${n.titulo}</div><div class="meta">${n.categoria} · ${tiempoDesde(n.created_at)}</div></div>
+      ${badgeEstado(n.estado)}
+    </div>
+  `).join('');
+}
+
+async function cargarPendientes(){
+  const cont = document.getElementById('lista-pendientes');
+  const { data, error } = await sb.from('notas').select('*').eq('estado','pendiente').order('created_at', {ascending:false});
+  if(error || !data || data.length === 0){ cont.innerHTML = '<div style="padding:20px; color:var(--ink-soft); font-size:13px;">No hay notas pendientes.</div>'; return; }
+  cont.innerHTML = data.map(n => `
+    <div class="fila-nota">
+      <div class="miniatura" style="${n.imagen_url ? `background-image:url('${n.imagen_url}'); background-size:cover;` : ''}"></div>
+      <div class="info"><div class="titulo">${n.titulo}</div><div class="meta">${n.categoria} · por ${n.autor_nombre} · ${tiempoDesde(n.created_at)}</div></div>
+      <div class="acciones-fila">
+        <button class="btn-rechazar" onclick="cambiarEstadoNota('${n.id}','rechazada')">Rechazar</button>
+        <button class="btn-aprobar" onclick="cambiarEstadoNota('${n.id}','publicada')">Aprobar y publicar</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function cargarPublicadas(){
+  const cont = document.getElementById('lista-publicadas');
+  const { data, error } = await sb.from('notas').select('*').eq('estado','publicada').order('created_at', {ascending:false});
+  if(error || !data || data.length === 0){ cont.innerHTML = '<div style="padding:20px; color:var(--ink-soft); font-size:13px;">Todavía no hay notas publicadas.</div>'; return; }
+  cont.innerHTML = data.map(n => `
+    <div class="fila-nota">
+      <div class="miniatura" style="${n.imagen_url ? `background-image:url('${n.imagen_url}'); background-size:cover;` : ''}"></div>
+      <div class="info"><div class="titulo">${n.titulo}</div><div class="meta">${n.categoria} · publicada ${tiempoDesde(n.publicada_at || n.created_at)}</div></div>
+    </div>
+  `).join('');
+}
+
+async function cambiarEstadoNota(id, nuevoEstado){
+  const cambios = { estado: nuevoEstado, updated_at: new Date().toISOString() };
+  if(nuevoEstado === 'publicada') cambios.publicada_at = new Date().toISOString();
+  const { error } = await sb.from('notas').update(cambios).eq('id', id);
+  if(error){ alert('Error: ' + error.message); return; }
+  cargarPendientes();
+  cargarPublicadas();
+}
+
+async function cargarUsuarios(){
+  const cont = document.getElementById('lista-usuarios');
+  const stats = document.getElementById('stats-usuarios');
+  const { data, error } = await sb.from('usuarios').select('*').order('created_at');
+  if(error || !data){ cont.innerHTML = '<div style="padding:20px;">Error al cargar usuarios.</div>'; return; }
+
+  const conteo = { admin:0, editor:0, redactor:0 };
+  data.forEach(u => conteo[u.rol]++);
+  stats.innerHTML = `
+    <div class="stat-card"><div class="num">${conteo.redactor}</div><div class="lbl">Redactores</div></div>
+    <div class="stat-card"><div class="num">${conteo.editor}</div><div class="lbl">Editores</div></div>
+    <div class="stat-card"><div class="num">${conteo.admin}</div><div class="lbl">Admins</div></div>
+  `;
+  cont.innerHTML = data.map(u => `
+    <div class="fila-usuario">
+      <div class="avatar-inicial">${u.nombre.charAt(0).toUpperCase()}</div>
+      <div class="info"><div class="nombre">${u.nombre}${u.activo ? '' : ' (inactivo)'}</div><div class="email">${u.rol} — ${u.email}</div></div>
+    </div>
+  `).join('');
+}
 </script>
 </body>
 </html>
