@@ -144,6 +144,13 @@ main{
   display:flex; gap:10px; align-items:center;
 }
 .meta .punto{ width:3px; height:3px; background:var(--ink-soft); border-radius:50%; }
+.etiquetas-nota{ margin-top:8px; }
+.etiqueta-badge{
+  display:inline-block;
+  background:var(--indigo); color:#fff;
+  font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:600;
+  padding:3px 9px; border-radius:3px; margin:2px 4px 2px 0;
+}
 
 .hero-secundarias{ display:flex; flex-direction:column; gap:16px; }
 .nota-mini{
@@ -362,30 +369,12 @@ footer{
   <div class="columna-principal">
 
     <!-- HERO -->
-    <section class="hero">
-      <article class="hero-principal" data-cat="politica">
-        <div class="hero-img">imagen de portada</div>
-        <div class="hero-texto">
-          <div class="eyebrow" data-cat="politica"><span class="play-tri"></span>Política</div>
-          <h1><a href="nota.html?id=1">Título de la nota principal del día, a definir por la redacción</a></h1>
-          <p>Bajada de la noticia destacada: un resumen breve de dos líneas que amplía el título y engancha al lector para que abra la nota completa.</p>
-          <div class="meta"><span>Redacción</span><span class="punto"></span><span>Hoy, 09:40</span></div>
-        </div>
-      </article>
-
-      <div class="hero-secundarias">
-        <article class="nota-mini" data-cat="sociedad">
-          <div class="cat" data-cat="sociedad">Sociedad</div>
-          <h3><a href="nota.html?id=2">Segunda noticia destacada de la portada</a></h3>
-          <div class="meta"><span>Hoy, 08:15</span></div>
-        </article>
-        <article class="nota-mini" data-cat="economia">
-          <div class="cat" data-cat="economia">Economía</div>
-          <h3><a href="nota.html?id=3">Tercera noticia destacada de la portada</a></h3>
-          <div class="meta"><span>Ayer, 19:30</span></div>
-        </article>
-      </div>
+    <section class="hero" id="hero-section" style="display:none;">
+      <!-- se completa por JS con la nota principal + 2 destacadas -->
     </section>
+    <div id="hero-vacio" style="display:none; text-align:center; padding:60px 20px; color:var(--ink-soft); font-family:'Space Grotesk',sans-serif;">
+      Todavía no hay notas publicadas. Cargá la primera desde el panel.
+    </div>
 
     <!-- BANNER PUBLICIDAD ANCHO -->
     <div class="ad-slot" style="min-height:110px; margin-bottom:44px;">
@@ -400,54 +389,7 @@ footer{
         <span id="contador-cat" style="font-size:12px; color:var(--ink-soft);"></span>
       </div>
       <div class="grilla-notas" id="grilla-notas">
-        <article class="nota-card" data-cat="deportes">
-          <div class="img">imagen</div>
-          <div class="cuerpo">
-            <div class="cat" data-cat="deportes">Deportes</div>
-            <h3><a href="nota.html?id=4">Título de nota de la grilla, a cargo del redactor</a></h3>
-            <div class="meta"><span>Hoy, 11:20</span></div>
-          </div>
-        </article>
-        <article class="nota-card" data-cat="cultura">
-          <div class="img">imagen</div>
-          <div class="cuerpo">
-            <div class="cat" data-cat="cultura">Cultura</div>
-            <h3><a href="nota.html?id=5">Título de nota de la grilla, a cargo del redactor</a></h3>
-            <div class="meta"><span>Hoy, 10:05</span></div>
-          </div>
-        </article>
-        <article class="nota-card" data-cat="policiales">
-          <div class="img">imagen</div>
-          <div class="cuerpo">
-            <div class="cat" data-cat="policiales">Policiales</div>
-            <h3><a href="nota.html?id=6">Título de nota de la grilla, a cargo del redactor</a></h3>
-            <div class="meta"><span>Hoy, 09:50</span></div>
-          </div>
-        </article>
-        <article class="nota-card" data-cat="politica">
-          <div class="img">imagen</div>
-          <div class="cuerpo">
-            <div class="cat" data-cat="politica">Política</div>
-            <h3><a href="nota.html?id=7">Título de nota de la grilla, a cargo del redactor</a></h3>
-            <div class="meta"><span>Ayer, 20:10</span></div>
-          </div>
-        </article>
-        <article class="nota-card" data-cat="sociedad">
-          <div class="img">imagen</div>
-          <div class="cuerpo">
-            <div class="cat" data-cat="sociedad">Sociedad</div>
-            <h3><a href="nota.html?id=8">Título de nota de la grilla, a cargo del redactor</a></h3>
-            <div class="meta"><span>Ayer, 18:45</span></div>
-          </div>
-        </article>
-        <article class="nota-card" data-cat="economia">
-          <div class="img">imagen</div>
-          <div class="cuerpo">
-            <div class="cat" data-cat="economia">Economía</div>
-            <h3><a href="nota.html?id=9">Título de nota de la grilla, a cargo del redactor</a></h3>
-            <div class="meta"><span>Ayer, 17:30</span></div>
-          </div>
-        </article>
+        <div style="grid-column:1/-1; padding:30px; text-align:center; color:var(--ink-soft); font-size:13px;">Cargando notas...</div>
       </div>
     </section>
 
@@ -501,7 +443,12 @@ footer{
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+  const SUPABASE_URL = 'https://rmbutukkldktjknvhizj.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_HJbQIiqaB6MGWnfTq0GlHw_dDO7tbAe';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   const hoy = new Date();
@@ -509,12 +456,149 @@ footer{
     dias[hoy.getDay()].charAt(0).toUpperCase()+dias[hoy.getDay()].slice(1) + ' ' + hoy.getDate() + ' de ' + meses[hoy.getMonth()] + ' de ' + hoy.getFullYear();
   document.getElementById('anio').textContent = hoy.getFullYear();
 
-  // --- filtro de categorías + buscador por texto, combinados ---
   const NOMBRES_CAT = {
     todas: 'Últimas noticias', politica: 'Política', sociedad: 'Sociedad',
     economia: 'Economía', deportes: 'Deportes', cultura: 'Cultura', policiales: 'Policiales'
   };
-  const hero = document.querySelector('.hero');
+  function categoriaKey(nombre){
+    return (nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+  function normalizar(txt){
+    return (txt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+  function tiempoRelativo(fechaIso){
+    const f = new Date(fechaIso);
+    const ahora = new Date();
+    const diffMs = ahora - f;
+    const diffMin = Math.floor(diffMs / 60000);
+    if(diffMin < 60) return diffMin <= 1 ? 'Hace un momento' : `Hace ${diffMin} min`;
+    const diffH = Math.floor(diffMin / 60);
+    if(diffH < 24) return `Hoy, ${f.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'})}`;
+    if(diffH < 48) return `Ayer, ${f.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'})}`;
+    return f.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit'}) + ' - ' + f.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+  }
+  function etiquetasHtml(etiquetas){
+    if(!etiquetas || etiquetas.length === 0) return '';
+    return '<div class="etiquetas-nota">' + etiquetas.map(t => `<span class="etiqueta-badge">${t}</span>`).join('') + '</div>';
+  }
+  function imgBloque(nota, claseImg, textoVacio){
+    if(nota.imagen_url){
+      return `<div class="${claseImg}" style="background-image:url('${nota.imagen_url}'); background-size:cover; background-position:center;"></div>`;
+    }
+    return `<div class="${claseImg}">${textoVacio}</div>`;
+  }
+
+  let TODAS_LAS_NOTAS = [];
+  let notasPrincipales = { principal:null, secundaria1:null, secundaria2:null };
+  let notasGrilla = [];
+
+  async function cargarPortada(){
+    const { data, error } = await sb.from('notas').select('*').eq('estado','publicada').order('created_at', {ascending:false});
+    if(error || !data){
+      document.getElementById('grilla-notas').innerHTML = '<div style="grid-column:1/-1; padding:30px; text-align:center; color:var(--ink-soft); font-size:13px;">No se pudieron cargar las notas.</div>';
+      return;
+    }
+    TODAS_LAS_NOTAS = data;
+
+    if(data.length === 0){
+      document.getElementById('hero-vacio').style.display = 'block';
+      document.getElementById('grilla-notas').innerHTML = '';
+      return;
+    }
+
+    // elegir destacadas: primero por posición explícita, si falta alguna se completa con las más recientes disponibles
+    const usadas = new Set();
+    function elegir(posicion){
+      let n = data.find(x => x.posicion === posicion && !usadas.has(x.id));
+      if(!n) n = data.find(x => !usadas.has(x.id));
+      if(n) usadas.add(n.id);
+      return n || null;
+    }
+    notasPrincipales.principal = elegir('principal');
+    notasPrincipales.secundaria1 = elegir('secundaria1');
+    notasPrincipales.secundaria2 = elegir('secundaria2');
+    notasGrilla = data.filter(n => !usadas.has(n.id));
+
+    renderHero();
+    renderGrilla();
+    render(); // aplica filtro/búsqueda actual (vacío al inicio)
+  }
+
+  function renderHero(){
+    const heroSection = document.getElementById('hero-section');
+    const p = notasPrincipales.principal;
+    if(!p){ heroSection.style.display = 'none'; return; }
+    heroSection.style.display = 'grid';
+
+    const catKeyP = categoriaKey(p.categoria);
+    let html = `
+      <article class="hero-principal" data-cat="${catKeyP}">
+        ${imgBloque(p, 'hero-img', 'sin imagen')}
+        <div class="hero-texto">
+          <div class="eyebrow" data-cat="${catKeyP}"><span class="play-tri"></span>${p.categoria}</div>
+          <h1><a href="nota.html?id=${p.id}">${p.titulo}</a></h1>
+          ${p.bajada ? `<p>${p.bajada}</p>` : ''}
+          <div class="meta"><span>${p.autor_nombre || 'Redacción'}</span><span class="punto"></span><span>${tiempoRelativo(p.created_at)}</span></div>
+          ${etiquetasHtml(p.etiquetas)}
+        </div>
+      </article>
+      <div class="hero-secundarias">
+    `;
+    [notasPrincipales.secundaria1, notasPrincipales.secundaria2].forEach(n => {
+      if(!n) return;
+      const catKey = categoriaKey(n.categoria);
+      html += `
+        <article class="nota-mini" data-cat="${catKey}">
+          <div class="cat" data-cat="${catKey}">${n.categoria}</div>
+          <h3><a href="nota.html?id=${n.id}">${n.titulo}</a></h3>
+          <div class="meta"><span>${tiempoRelativo(n.created_at)}</span></div>
+          ${etiquetasHtml(n.etiquetas)}
+        </article>
+      `;
+    });
+    html += `</div>`;
+    heroSection.innerHTML = html;
+
+    heroSection.querySelectorAll('.cat[data-cat], .eyebrow[data-cat]').forEach(etq => {
+      etq.addEventListener('click', () => {
+        aplicarFiltro(etq.dataset.cat);
+        document.getElementById('grilla-notas').scrollIntoView({behavior:'smooth', block:'start'});
+      });
+    });
+  }
+
+  function renderGrilla(){
+    const grilla = document.getElementById('grilla-notas');
+    if(notasGrilla.length === 0){
+      grilla.innerHTML = '<div style="grid-column:1/-1; padding:30px; text-align:center; color:var(--ink-soft); font-size:13px;">No hay más notas por ahora.</div>';
+      return;
+    }
+    grilla.innerHTML = notasGrilla.map(n => {
+      const catKey = categoriaKey(n.categoria);
+      return `
+        <article class="nota-card" data-cat="${catKey}">
+          ${imgBloque(n, 'img', 'sin imagen')}
+          <div class="cuerpo">
+            <div class="cat" data-cat="${catKey}">${n.categoria}</div>
+            <h3><a href="nota.html?id=${n.id}">${n.titulo}</a></h3>
+            <div class="meta"><span>${tiempoRelativo(n.created_at)}</span></div>
+            ${etiquetasHtml(n.etiquetas)}
+          </div>
+        </article>
+      `;
+    }).join('');
+
+    // los clics en categoría dentro de la grilla ya generada necesitan su listener
+    grilla.querySelectorAll('.cat[data-cat]').forEach(etq => {
+      etq.addEventListener('click', () => {
+        aplicarFiltro(etq.dataset.cat);
+        grilla.scrollIntoView({behavior:'smooth', block:'start'});
+      });
+    });
+  }
+
+  // --- filtro de categorías + buscador por texto, combinados ---
+  const hero = document.getElementById('hero-section');
   const grilla = document.getElementById('grilla-notas');
   const tituloSeccion = document.getElementById('titulo-seccion');
   const contadorCat = document.getElementById('contador-cat');
@@ -522,28 +606,49 @@ footer{
   let catActiva = 'todas';
   let textoBusqueda = '';
 
-  function normalizar(txt){
-    return txt.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  }
-
   function aplicarFiltro(cat){
     catActiva = cat;
     render();
   }
 
   function render(){
+    if(TODAS_LAS_NOTAS.length === 0) return;
     const hayTexto = textoBusqueda.trim().length > 0;
-    hero.style.display = (catActiva === 'todas' && !hayTexto) ? 'grid' : 'none';
+    const filtroActivo = (catActiva !== 'todas') || hayTexto;
+    hero.style.display = filtroActivo ? 'none' : 'grid';
 
     let visibles = 0;
-    grilla.querySelectorAll('.nota-card').forEach(card => {
-      const matchCat = (catActiva === 'todas') || (card.dataset.cat === catActiva);
-      const tituloCard = normalizar(card.querySelector('h3').textContent);
-      const matchTexto = !hayTexto || tituloCard.includes(normalizar(textoBusqueda));
-      const match = matchCat && matchTexto;
-      card.style.display = match ? '' : 'none';
-      if (match) visibles++;
-    });
+    if(filtroActivo){
+      // en modo filtro/búsqueda se muestran TODAS las notas publicadas (incluidas las destacadas), no solo la grilla regular
+      const resultado = TODAS_LAS_NOTAS.filter(n => {
+        const matchCat = (catActiva === 'todas') || (categoriaKey(n.categoria) === catActiva);
+        const matchTexto = !hayTexto || normalizar(n.titulo).includes(normalizar(textoBusqueda));
+        return matchCat && matchTexto;
+      });
+      visibles = resultado.length;
+      grilla.innerHTML = resultado.length === 0
+        ? '<div style="grid-column:1/-1; padding:30px; text-align:center; color:var(--ink-soft); font-size:13px;">No se encontraron notas.</div>'
+        : resultado.map(n => {
+            const catKey = categoriaKey(n.categoria);
+            return `
+              <article class="nota-card" data-cat="${catKey}">
+                ${imgBloque(n, 'img', 'sin imagen')}
+                <div class="cuerpo">
+                  <div class="cat" data-cat="${catKey}">${n.categoria}</div>
+                  <h3><a href="nota.html?id=${n.id}">${n.titulo}</a></h3>
+                  <div class="meta"><span>${tiempoRelativo(n.created_at)}</span></div>
+                  ${etiquetasHtml(n.etiquetas)}
+                </div>
+              </article>
+            `;
+          }).join('');
+      grilla.querySelectorAll('.cat[data-cat]').forEach(etq => {
+        etq.addEventListener('click', () => aplicarFiltro(etq.dataset.cat));
+      });
+    } else {
+      renderGrilla();
+      visibles = notasGrilla.length;
+    }
 
     if (hayTexto){
       tituloSeccion.textContent = `Resultados para "${textoBusqueda}"`;
@@ -551,12 +656,11 @@ footer{
       tituloSeccion.textContent = NOMBRES_CAT[catActiva] || catActiva;
     }
 
-    const mostrarReset = (catActiva !== 'todas') || hayTexto;
-    contadorCat.innerHTML = mostrarReset
+    contadorCat.innerHTML = filtroActivo
       ? (visibles + (visibles === 1 ? ' nota — ' : ' notas — ') + '<a href="#" id="reset-filtro" style="color:var(--indigo); font-weight:600;">ver todas</a>')
       : '';
 
-    if (mostrarReset){
+    if (filtroActivo){
       document.getElementById('reset-filtro').addEventListener('click', (e) => {
         e.preventDefault();
         catActiva = 'todas';
@@ -566,15 +670,7 @@ footer{
         render();
       });
     }
-
   }
-
-  document.querySelectorAll('.cat[data-cat], .eyebrow[data-cat]').forEach(etiqueta => {
-    etiqueta.addEventListener('click', () => {
-      aplicarFiltro(etiqueta.dataset.cat);
-      document.getElementById('grilla-notas').scrollIntoView({behavior:'smooth', block:'start'});
-    });
-  });
 
   // --- buscador ---
   const inputBuscar = document.getElementById('buscador-input');
@@ -591,6 +687,8 @@ footer{
     render();
     inputBuscar.focus();
   });
+
+  cargarPortada();
 </script>
 
 </body>

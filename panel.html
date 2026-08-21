@@ -140,6 +140,22 @@ button, input, select, textarea{ font-family:inherit; }
 .btn-aprobar{ background:var(--verde); color:#fff; }
 .btn-editar{ background:var(--bg); border:1px solid var(--line); color:var(--ink); }
 .btn-rechazar{ background:#FBEAE8; color:var(--rojo); }
+.btn-borrar{ background:#FBEAE8; color:var(--rojo); }
+
+.etiqueta-badge{
+  display:inline-block;
+  background:var(--indigo); color:#fff;
+  font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:600;
+  padding:3px 9px; border-radius:3px; margin:2px 4px 2px 0;
+}
+.selector-posicion{
+  font-size:12px; padding:5px 8px; border:1px solid var(--line); border-radius:4px;
+  font-family:'Space Grotesk',sans-serif; color:var(--ink); background:var(--card);
+}
+.badge-posicion{
+  font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:10px;
+  padding:3px 9px; border-radius:20px; white-space:nowrap; background:#EDE7FB; color:var(--indigo);
+}
 
 /* --- usuarios (admin) --- */
 .tabla-usuarios{ background:var(--card); border:1px solid var(--line); border-radius:6px; overflow:hidden; }
@@ -205,7 +221,6 @@ button, input, select, textarea{ font-family:inherit; }
     <nav class="panel-nav">
       <a class="activa" data-vista="v-cargar"><span class="play-tri"></span><span class="txt">Cargar nota</span></a>
       <a data-vista="v-mis-notas"><span class="play-tri"></span><span class="txt">Mis notas</span></a>
-      <a data-vista="v-pendientes" id="nav-pendientes" style="display:none;"><span class="play-tri"></span><span class="txt">Pendientes de revisión</span></a>
       <a data-vista="v-publicadas"><span class="play-tri"></span><span class="txt">Publicadas</span></a>
       <div class="separador" id="separador-admin" style="display:none;"></div>
       <a data-vista="v-usuarios" id="nav-usuarios" style="display:none;"><span class="play-tri"></span><span class="txt">Usuarios</span></a>
@@ -215,8 +230,8 @@ button, input, select, textarea{ font-family:inherit; }
 
       <!-- CARGAR NOTA -->
       <section class="vista activa" id="v-cargar">
-        <h2>Cargar nota</h2>
-        <p class="subt">Completá los datos. Al guardar queda como <b>pendiente de revisión</b> hasta que un editor la apruebe.</p>
+        <h2 id="titulo-form-cargar">Cargar nota</h2>
+        <p class="subt" id="subt-form-cargar">Completá los datos. Con "Publicar" queda visible en la portada al instante; con "Guardar borrador" queda oculta hasta que la termines.</p>
         <div class="form-nota">
           <div class="campo">
             <label>Título</label>
@@ -241,10 +256,26 @@ button, input, select, textarea{ font-family:inherit; }
             <label>Cuerpo de la nota</label>
             <textarea id="f-cuerpo" placeholder="Escribí el contenido completo acá..."></textarea>
           </div>
+          <div class="fila">
+            <div class="campo">
+              <label>Etiquetas (separadas por coma)</label>
+              <input type="text" id="f-etiquetas" placeholder="ej: municipio, ruta 3, elecciones">
+            </div>
+            <div class="campo">
+              <label>Posición en portada</label>
+              <select id="f-posicion">
+                <option value="regular">Regular (listado normal)</option>
+                <option value="principal">Nota principal (grande)</option>
+                <option value="secundaria1">Nota destacada 2</option>
+                <option value="secundaria2">Nota destacada 3</option>
+              </select>
+            </div>
+          </div>
           <div class="campo" id="form-msg" style="display:none; font-size:13px;"></div>
           <div class="acciones-form">
+            <button class="btn-secundario" id="btn-cancelar-edicion" onclick="cancelarEdicion()" style="display:none;">Cancelar edición</button>
             <button class="btn-secundario" onclick="guardarNota('borrador')">Guardar borrador</button>
-            <button class="btn-enviar" onclick="guardarNota('pendiente')">Enviar a revisión</button>
+            <button class="btn-enviar" id="btn-publicar" onclick="guardarNota('publicada')">Publicar</button>
           </div>
         </div>
       </section>
@@ -256,17 +287,10 @@ button, input, select, textarea{ font-family:inherit; }
         <div class="tabla-notas" id="lista-mis-notas"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
       </section>
 
-      <!-- PENDIENTES (editor/admin) -->
-      <section class="vista" id="v-pendientes">
-        <h2>Pendientes de revisión</h2>
-        <p class="subt">Notas enviadas por redactores, esperando aprobación.</p>
-        <div class="tabla-notas" id="lista-pendientes"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
-      </section>
-
       <!-- PUBLICADAS -->
       <section class="vista" id="v-publicadas">
         <h2>Publicadas</h2>
-        <p class="subt">Notas ya visibles en la portada del sitio.</p>
+        <p class="subt">Notas visibles en la portada del sitio. Elegí su posición destacada, editalas o borralas.</p>
         <div class="tabla-notas" id="lista-publicadas"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
       </section>
 
@@ -364,25 +388,23 @@ function mostrarPanel(data){
   document.getElementById('nombre-usuario').textContent = data.nombre;
 
   const badge = document.getElementById('rol-badge');
-  const navPendientes = document.getElementById('nav-pendientes');
   const navUsuarios = document.getElementById('nav-usuarios');
   const separador = document.getElementById('separador-admin');
 
   badge.classList.remove('rol-admin','rol-editor','rol-redactor');
   if(data.rol === 'admin'){
     badge.textContent = 'Admin'; badge.classList.add('rol-admin');
-    navPendientes.style.display = 'flex'; navUsuarios.style.display = 'flex'; separador.style.display = 'block';
+    navUsuarios.style.display = 'flex'; separador.style.display = 'block';
   } else if(data.rol === 'editor'){
     badge.textContent = 'Editor'; badge.classList.add('rol-editor');
-    navPendientes.style.display = 'flex'; navUsuarios.style.display = 'none'; separador.style.display = 'none';
+    navUsuarios.style.display = 'none'; separador.style.display = 'none';
   } else {
     badge.textContent = 'Redactor'; badge.classList.add('rol-redactor');
-    navPendientes.style.display = 'none'; navUsuarios.style.display = 'none'; separador.style.display = 'none';
+    navUsuarios.style.display = 'none'; separador.style.display = 'none';
   }
 
   cargarMisNotas();
   cargarPublicadas();
-  if(data.rol !== 'redactor') cargarPendientes();
   if(data.rol === 'admin') cargarUsuarios();
 }
 
@@ -426,11 +448,22 @@ async function subirImagen(archivo){
 }
 
 // --- cargar nota (borrador o pendiente) ---
+let editandoId = null; // null = creando nota nueva; si tiene valor, estamos editando esa nota
+
+async function liberarPosicion(posicion, idAExcluir){
+  if(posicion === 'regular') return;
+  let query = sb.from('notas').update({ posicion: 'regular' }).eq('posicion', posicion).eq('estado','publicada');
+  if(idAExcluir) query = query.neq('id', idAExcluir);
+  await query;
+}
+
 async function guardarNota(estadoDestino){
   const titulo = document.getElementById('f-titulo').value.trim();
   const bajada = document.getElementById('f-bajada').value.trim();
   const categoria = document.getElementById('f-categoria').value;
   const cuerpo = document.getElementById('f-cuerpo').value.trim();
+  const etiquetasRaw = document.getElementById('f-etiquetas').value.trim();
+  const posicion = document.getElementById('f-posicion').value;
   const archivoImg = document.getElementById('f-imagen').files[0];
   const msg = document.getElementById('form-msg');
 
@@ -452,12 +485,35 @@ async function guardarNota(estadoDestino){
     return;
   }
 
-  const { error } = await sb.from('notas').insert({
-    titulo, bajada, categoria, cuerpo, imagen_url,
+  const etiquetas = etiquetasRaw ? etiquetasRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+  // si esta nota va a ocupar un lugar destacado, la que estaba ahí pasa a "regular"
+  if(estadoDestino === 'publicada'){
+    await liberarPosicion(posicion, editandoId);
+  }
+
+  const datos = {
+    titulo, bajada, categoria, cuerpo, etiquetas,
     estado: estadoDestino,
-    autor_id: usuarioActual.id,
-    autor_nombre: usuarioActual.nombre
-  });
+    posicion: estadoDestino === 'publicada' ? posicion : 'regular',
+    updated_at: new Date().toISOString()
+  };
+  if(imagen_url) datos.imagen_url = imagen_url;
+  if(estadoDestino === 'publicada' && (!editandoId)) datos.publicada_at = new Date().toISOString();
+
+  let error;
+  if(editandoId){
+    if(estadoDestino === 'publicada'){
+      // si la nota editada no tenía fecha de publicación (venía de borrador), se la ponemos
+      const { data: actual } = await sb.from('notas').select('publicada_at').eq('id', editandoId).maybeSingle();
+      if(actual && !actual.publicada_at) datos.publicada_at = new Date().toISOString();
+    }
+    ({ error } = await sb.from('notas').update(datos).eq('id', editandoId));
+  } else {
+    datos.autor_id = usuarioActual.id;
+    datos.autor_nombre = usuarioActual.nombre;
+    ({ error } = await sb.from('notas').insert(datos));
+  }
 
   if(error){
     msg.style.color = '#C4382E';
@@ -466,13 +522,64 @@ async function guardarNota(estadoDestino){
   }
 
   msg.style.color = '#1F9254';
-  msg.textContent = estadoDestino === 'pendiente' ? 'Nota enviada a revisión.' : 'Borrador guardado.';
+  msg.textContent = estadoDestino === 'publicada' ? (editandoId ? 'Cambios publicados.' : 'Nota publicada.') : 'Borrador guardado.';
+
+  cancelarEdicion();
+  cargarMisNotas();
+  cargarPublicadas();
+}
+
+function cancelarEdicion(){
+  editandoId = null;
+  document.getElementById('titulo-form-cargar').textContent = 'Cargar nota';
+  document.getElementById('subt-form-cargar').textContent = 'Completá los datos. Con "Publicar" queda visible en la portada al instante; con "Guardar borrador" queda oculta hasta que la termines.';
+  document.getElementById('btn-cancelar-edicion').style.display = 'none';
   document.getElementById('f-titulo').value = '';
   document.getElementById('f-bajada').value = '';
   document.getElementById('f-cuerpo').value = '';
+  document.getElementById('f-etiquetas').value = '';
+  document.getElementById('f-posicion').value = 'regular';
+  document.getElementById('f-categoria').value = 'Política';
   document.getElementById('f-imagen').value = '';
   document.getElementById('upload-box-txt').textContent = 'Arrastrá una imagen o hacé clic para subirla';
+}
+
+async function editarNota(id){
+  const { data: n, error } = await sb.from('notas').select('*').eq('id', id).maybeSingle();
+  if(error || !n){ alert('No se pudo cargar la nota.'); return; }
+
+  editandoId = id;
+  document.getElementById('titulo-form-cargar').textContent = 'Editando nota';
+  document.getElementById('subt-form-cargar').textContent = 'Modificá lo que necesites y guardá los cambios.';
+  document.getElementById('btn-cancelar-edicion').style.display = 'inline-block';
+  document.getElementById('f-titulo').value = n.titulo || '';
+  document.getElementById('f-bajada').value = n.bajada || '';
+  document.getElementById('f-cuerpo').value = n.cuerpo || '';
+  document.getElementById('f-categoria').value = n.categoria || 'Política';
+  document.getElementById('f-etiquetas').value = (n.etiquetas || []).join(', ');
+  document.getElementById('f-posicion').value = n.posicion || 'regular';
+  if(n.imagen_url) document.getElementById('upload-box-txt').textContent = '✓ ya tiene imagen cargada (subí otra para reemplazarla)';
+
+  document.querySelectorAll('.panel-nav a').forEach(a => a.classList.remove('activa'));
+  document.querySelector('.panel-nav a[data-vista="v-cargar"]').classList.add('activa');
+  document.querySelectorAll('.vista').forEach(v => v.classList.remove('activa'));
+  document.getElementById('v-cargar').classList.add('activa');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+async function borrarNota(id, titulo){
+  if(!confirm(`¿Borrar la nota "${titulo}"? Esta acción no se puede deshacer.`)) return;
+  const { error } = await sb.from('notas').delete().eq('id', id);
+  if(error){ alert('Error al borrar: ' + error.message); return; }
   cargarMisNotas();
+  cargarPublicadas();
+}
+
+async function cambiarPosicion(id, nuevaPosicion){
+  await liberarPosicion(nuevaPosicion, id);
+  const { error } = await sb.from('notas').update({ posicion: nuevaPosicion }).eq('id', id);
+  if(error){ alert('Error: ' + error.message); return; }
+  cargarPublicadas();
 }
 
 document.getElementById('f-imagen').addEventListener('change', (e) => {
@@ -482,7 +589,7 @@ document.getElementById('f-imagen').addEventListener('change', (e) => {
 
 // --- listados ---
 function badgeEstado(estado){
-  const mapa = { pendiente:['Pendiente','estado-pendiente'], publicada:['Publicada','estado-publicada'], borrador:['Borrador','estado-borrador'], rechazada:['Rechazada','estado-borrador'] };
+  const mapa = { publicada:['Publicada','estado-publicada'], borrador:['Borrador','estado-borrador'] };
   const [txt, clase] = mapa[estado] || [estado, 'estado-borrador'];
   return `<span class="estado-badge ${clase}">${txt}</span>`;
 }
@@ -490,6 +597,11 @@ function tiempoDesde(fechaIso){
   const f = new Date(fechaIso);
   return f.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit'}) + ' ' + f.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
 }
+function etiquetasHtml(etiquetas){
+  if(!etiquetas || etiquetas.length === 0) return '';
+  return '<div style="margin-top:6px;">' + etiquetas.map(t => `<span class="etiqueta-badge">${t}</span>`).join('') + '</div>';
+}
+const NOMBRES_POSICION = { principal:'Principal', secundaria1:'Destacada 2', secundaria2:'Destacada 3', regular:'Regular' };
 
 async function cargarMisNotas(){
   const cont = document.getElementById('lista-mis-notas');
@@ -498,23 +610,15 @@ async function cargarMisNotas(){
   cont.innerHTML = data.map(n => `
     <div class="fila-nota">
       <div class="miniatura" style="${n.imagen_url ? `background-image:url('${n.imagen_url}'); background-size:cover;` : ''}"></div>
-      <div class="info"><div class="titulo">${n.titulo}</div><div class="meta">${n.categoria} · ${tiempoDesde(n.created_at)}</div></div>
+      <div class="info">
+        <div class="titulo">${n.titulo}</div>
+        <div class="meta">${n.categoria} · ${tiempoDesde(n.created_at)}</div>
+        ${etiquetasHtml(n.etiquetas)}
+      </div>
       ${badgeEstado(n.estado)}
-    </div>
-  `).join('');
-}
-
-async function cargarPendientes(){
-  const cont = document.getElementById('lista-pendientes');
-  const { data, error } = await sb.from('notas').select('*').eq('estado','pendiente').order('created_at', {ascending:false});
-  if(error || !data || data.length === 0){ cont.innerHTML = '<div style="padding:20px; color:var(--ink-soft); font-size:13px;">No hay notas pendientes.</div>'; return; }
-  cont.innerHTML = data.map(n => `
-    <div class="fila-nota">
-      <div class="miniatura" style="${n.imagen_url ? `background-image:url('${n.imagen_url}'); background-size:cover;` : ''}"></div>
-      <div class="info"><div class="titulo">${n.titulo}</div><div class="meta">${n.categoria} · por ${n.autor_nombre} · ${tiempoDesde(n.created_at)}</div></div>
       <div class="acciones-fila">
-        <button class="btn-rechazar" onclick="cambiarEstadoNota('${n.id}','rechazada')">Rechazar</button>
-        <button class="btn-aprobar" onclick="cambiarEstadoNota('${n.id}','publicada')">Aprobar y publicar</button>
+        <button class="btn-editar" onclick="editarNota('${n.id}')">Editar</button>
+        <button class="btn-borrar" onclick="borrarNota('${n.id}', ${JSON.stringify(n.titulo)})">Borrar</button>
       </div>
     </div>
   `).join('');
@@ -527,18 +631,23 @@ async function cargarPublicadas(){
   cont.innerHTML = data.map(n => `
     <div class="fila-nota">
       <div class="miniatura" style="${n.imagen_url ? `background-image:url('${n.imagen_url}'); background-size:cover;` : ''}"></div>
-      <div class="info"><div class="titulo">${n.titulo}</div><div class="meta">${n.categoria} · publicada ${tiempoDesde(n.publicada_at || n.created_at)}</div></div>
+      <div class="info">
+        <div class="titulo">${n.titulo}</div>
+        <div class="meta">${n.categoria} · por ${n.autor_nombre || ''} · publicada ${tiempoDesde(n.publicada_at || n.created_at)}</div>
+        ${etiquetasHtml(n.etiquetas)}
+      </div>
+      <select class="selector-posicion" onchange="cambiarPosicion('${n.id}', this.value)">
+        <option value="regular" ${n.posicion === 'regular' ? 'selected' : ''}>Regular</option>
+        <option value="principal" ${n.posicion === 'principal' ? 'selected' : ''}>Nota principal</option>
+        <option value="secundaria1" ${n.posicion === 'secundaria1' ? 'selected' : ''}>Destacada 2</option>
+        <option value="secundaria2" ${n.posicion === 'secundaria2' ? 'selected' : ''}>Destacada 3</option>
+      </select>
+      <div class="acciones-fila">
+        <button class="btn-editar" onclick="editarNota('${n.id}')">Editar</button>
+        <button class="btn-borrar" onclick="borrarNota('${n.id}', ${JSON.stringify(n.titulo)})">Borrar</button>
+      </div>
     </div>
   `).join('');
-}
-
-async function cambiarEstadoNota(id, nuevoEstado){
-  const cambios = { estado: nuevoEstado, updated_at: new Date().toISOString() };
-  if(nuevoEstado === 'publicada') cambios.publicada_at = new Date().toISOString();
-  const { error } = await sb.from('notas').update(cambios).eq('id', id);
-  if(error){ alert('Error: ' + error.message); return; }
-  cargarPendientes();
-  cargarPublicadas();
 }
 
 async function cargarUsuarios(){

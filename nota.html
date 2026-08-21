@@ -113,6 +113,12 @@ article.nota-completa{
   padding:6px 12px; border-radius:20px;
 }
 .tags a:hover{ color:var(--indigo); border-color:var(--indigo); }
+.etiqueta-badge{
+  display:inline-block;
+  background:var(--indigo); color:#fff;
+  font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:600;
+  padding:5px 12px; border-radius:3px;
+}
 
 .ad-slot{
   background:repeating-linear-gradient(135deg, #EFEDF9, #EFEDF9 10px, #E7E4F5 10px, #E7E4F5 20px);
@@ -201,75 +207,26 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
 <main>
   <div class="columna-principal">
 
-    <div class="migas">
-      <a href="index.html">Portada</a> <span>/</span> <a href="index.html">Política</a>
+    <div class="migas" id="migas">
+      <a href="index.html">Portada</a>
     </div>
 
-    <article class="nota-completa">
-      <div class="cat-nota"><span class="play-tri"></span>Política</div>
-      <h1>Título de la nota principal del día, a definir por la redacción</h1>
-      <p class="bajada">Bajada de la noticia: un resumen de dos o tres líneas que amplía el título y ubica al lector antes de entrar al cuerpo de la nota.</p>
-
-      <div class="meta-nota">
-        <span class="autor">Redacción</span>
-        <span class="punto"></span>
-        <span>Hoy, 09:40</span>
-        <span class="punto"></span>
-        <span>Actualizado 10:15</span>
-        <div class="compartir">
-          <a href="#" title="Compartir en Facebook">f</a>
-          <a href="#" title="Compartir en WhatsApp">w</a>
-          <a href="#" title="Copiar link">🔗</a>
-        </div>
-      </div>
-
-      <div class="img-portada-nota">imagen principal de la nota</div>
-      <div class="credito-img">Foto: Caleta Olivia Digital</div>
-
-      <div class="cuerpo-nota">
-        <p>Primer párrafo de la nota, donde se desarrolla la información principal con el detalle de lo sucedido, quiénes están involucrados y el contexto general del hecho.</p>
-        <p>Segundo párrafo, ampliando con declaraciones, datos o antecedentes relevantes para entender la noticia en profundidad.</p>
-        <p>Párrafo de cierre, con las próximas repercusiones o pasos a seguir sobre el tema tratado.</p>
-      </div>
-
-      <div class="tags">
-        <a href="index.html">#Política</a>
-        <a href="index.html">#CaletaOlivia</a>
-        <a href="index.html">#SantaCruz</a>
-      </div>
+    <article class="nota-completa" id="nota-completa" style="display:none;">
+      <!-- se completa por JS -->
     </article>
+    <div id="nota-no-encontrada" style="display:none; text-align:center; padding:60px 20px; color:var(--ink-soft); font-family:'Space Grotesk',sans-serif;">
+      No se encontró esta nota. <a href="index.html" style="color:var(--indigo); font-weight:600;">Volver a la portada</a>
+    </div>
 
     <div class="ad-slot" style="min-height:110px; margin-top:28px;">
       <span>Espacio publicitario</span>
       Banner 970x90
     </div>
 
-    <div class="seccion-titulo">
+    <div class="seccion-titulo" id="titulo-relacionadas" style="display:none;">
       <h2><span class="play-tri"></span>Te puede interesar</h2>
     </div>
-    <div class="grilla-relacionadas">
-      <article class="nota-card">
-        <div class="img">imagen</div>
-        <div class="cuerpo">
-          <div class="cat">Sociedad</div>
-          <h3><a href="nota.html?id=2">Nota relacionada uno, del mismo tema o categoría</a></h3>
-        </div>
-      </article>
-      <article class="nota-card">
-        <div class="img">imagen</div>
-        <div class="cuerpo">
-          <div class="cat">Economía</div>
-          <h3><a href="nota.html?id=3">Nota relacionada dos, del mismo tema o categoría</a></h3>
-        </div>
-      </article>
-      <article class="nota-card">
-        <div class="img">imagen</div>
-        <div class="cuerpo">
-          <div class="cat">Deportes</div>
-          <h3><a href="nota.html?id=4">Nota relacionada tres, del mismo tema o categoría</a></h3>
-        </div>
-      </article>
-    </div>
+    <div class="grilla-relacionadas" id="grilla-relacionadas"></div>
 
   </div>
 
@@ -313,13 +270,109 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+  const SUPABASE_URL = 'https://rmbutukkldktjknvhizj.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_HJbQIiqaB6MGWnfTq0GlHw_dDO7tbAe';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   const hoy = new Date();
   document.getElementById('fecha-hoy').textContent =
     dias[hoy.getDay()].charAt(0).toUpperCase()+dias[hoy.getDay()].slice(1) + ' ' + hoy.getDate() + ' de ' + meses[hoy.getMonth()] + ' de ' + hoy.getFullYear();
   document.getElementById('anio').textContent = hoy.getFullYear();
+
+  function categoriaKey(nombre){
+    return (nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+  function fechaCorta(fechaIso){
+    const f = new Date(fechaIso);
+    return f.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit'}) + ', ' + f.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+  }
+  function parrafosHtml(cuerpo){
+    return (cuerpo || '').split(/\n+/).filter(p => p.trim()).map(p => `<p>${p}</p>`).join('');
+  }
+  function etiquetasHtml(etiquetas){
+    if(!etiquetas || etiquetas.length === 0) return '';
+    return '<div class="tags">' + etiquetas.map(t => `<span class="etiqueta-badge">${t}</span>`).join('') + '</div>';
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const notaId = params.get('id');
+
+  async function cargarNota(){
+    if(!notaId){ mostrarNoEncontrada(); return; }
+
+    const { data: n, error } = await sb.from('notas').select('*').eq('id', notaId).eq('estado','publicada').maybeSingle();
+    if(error || !n){ mostrarNoEncontrada(); return; }
+
+    document.title = `${n.titulo} — Caleta Olivia Digital`;
+
+    document.getElementById('migas').innerHTML = `
+      <a href="index.html">Portada</a> <span>/</span> <a href="index.html">${n.categoria}</a>
+    `;
+
+    const cont = document.getElementById('nota-completa');
+    cont.style.display = 'block';
+    cont.innerHTML = `
+      <div class="cat-nota"><span class="play-tri"></span>${n.categoria}</div>
+      <h1>${n.titulo}</h1>
+      ${n.bajada ? `<p class="bajada">${n.bajada}</p>` : ''}
+
+      <div class="meta-nota">
+        <span class="autor">${n.autor_nombre || 'Redacción'}</span>
+        <span class="punto"></span>
+        <span>${fechaCorta(n.created_at)}</span>
+        <div class="compartir">
+          <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}" target="_blank" rel="noopener" title="Compartir en Facebook">f</a>
+          <a href="https://wa.me/?text=${encodeURIComponent(n.titulo + ' ' + window.location.href)}" target="_blank" rel="noopener" title="Compartir en WhatsApp">w</a>
+          <a href="#" onclick="navigator.clipboard.writeText(window.location.href); this.textContent='✓'; return false;" title="Copiar link">🔗</a>
+        </div>
+      </div>
+
+      ${n.imagen_url
+        ? `<div class="img-portada-nota" style="background-image:url('${n.imagen_url}'); background-size:cover; background-position:center;"></div>`
+        : `<div class="img-portada-nota">sin imagen</div>`}
+
+      <div class="cuerpo-nota">${parrafosHtml(n.cuerpo)}</div>
+
+      ${etiquetasHtml(n.etiquetas)}
+    `;
+
+    cargarRelacionadas(n.categoria, n.id);
+  }
+
+  function mostrarNoEncontrada(){
+    document.getElementById('nota-no-encontrada').style.display = 'block';
+  }
+
+  async function cargarRelacionadas(categoria, idActual){
+    const { data, error } = await sb.from('notas')
+      .select('*')
+      .eq('estado','publicada')
+      .eq('categoria', categoria)
+      .neq('id', idActual)
+      .order('created_at', {ascending:false})
+      .limit(3);
+
+    if(error || !data || data.length === 0) return;
+
+    document.getElementById('titulo-relacionadas').style.display = 'flex';
+    document.getElementById('grilla-relacionadas').innerHTML = data.map(n => `
+      <article class="nota-card">
+        ${n.imagen_url
+          ? `<div class="img" style="background-image:url('${n.imagen_url}'); background-size:cover; background-position:center;"></div>`
+          : `<div class="img">sin imagen</div>`}
+        <div class="cuerpo">
+          <div class="cat">${n.categoria}</div>
+          <h3><a href="nota.html?id=${n.id}">${n.titulo}</a></h3>
+        </div>
+      </article>
+    `).join('');
+  }
+
+  cargarNota();
 </script>
 
 </body>
