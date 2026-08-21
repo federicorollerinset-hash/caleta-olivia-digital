@@ -275,6 +275,38 @@ button, input, select, textarea{ font-family:inherit; }
         <h2>Usuarios</h2>
         <p class="subt">Gestión de cuentas del panel: quién puede cargar y quién puede aprobar.</p>
         <div class="tarjetas-stats" id="stats-usuarios"></div>
+
+        <div class="form-nota" style="margin-bottom:24px;">
+          <div class="fila">
+            <div class="campo">
+              <label>Nombre</label>
+              <input type="text" id="nu-nombre" placeholder="Nombre y apellido">
+            </div>
+            <div class="campo">
+              <label>Email</label>
+              <input type="email" id="nu-email" placeholder="nombre@caletaoliviadigital.com">
+            </div>
+          </div>
+          <div class="fila">
+            <div class="campo">
+              <label>Contraseña</label>
+              <input type="password" id="nu-pass" placeholder="Contraseña inicial">
+            </div>
+            <div class="campo">
+              <label>Rol</label>
+              <select id="nu-rol">
+                <option value="redactor">Redactor</option>
+                <option value="editor">Editor</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+          <div class="campo" id="nu-msg" style="display:none; font-size:13px;"></div>
+          <div class="acciones-form">
+            <button class="btn-enviar" onclick="crearUsuario()">Crear usuario</button>
+          </div>
+        </div>
+
         <div class="tabla-usuarios" id="lista-usuarios"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
       </section>
 
@@ -512,6 +544,41 @@ async function cargarUsuarios(){
       <div class="info"><div class="nombre">${u.nombre}${u.activo ? '' : ' (inactivo)'}</div><div class="email">${u.rol} — ${u.email}</div></div>
     </div>
   `).join('');
+}
+async function crearUsuario(){
+  const nombre = document.getElementById('nu-nombre').value.trim();
+  const email = document.getElementById('nu-email').value.trim().toLowerCase();
+  const pass = document.getElementById('nu-pass').value;
+  const rol = document.getElementById('nu-rol').value;
+  const msg = document.getElementById('nu-msg');
+
+  if(!nombre || !email || !pass){
+    msg.style.display = 'block'; msg.style.color = '#C4382E';
+    msg.textContent = 'Completá nombre, email y contraseña.';
+    return;
+  }
+  if(pass.length < 6){
+    msg.style.display = 'block'; msg.style.color = '#C4382E';
+    msg.textContent = 'La contraseña debería tener al menos 6 caracteres.';
+    return;
+  }
+
+  const password_hash = await sha256(pass);
+  const { error } = await sb.from('usuarios').insert({ nombre, email, password_hash, rol });
+
+  msg.style.display = 'block';
+  if(error){
+    msg.style.color = '#C4382E';
+    msg.textContent = error.message.includes('duplicate') ? 'Ya existe un usuario con ese email.' : ('Error: ' + error.message);
+    return;
+  }
+
+  msg.style.color = '#1F9254';
+  msg.textContent = `Usuario ${nombre} creado como ${rol}.`;
+  document.getElementById('nu-nombre').value = '';
+  document.getElementById('nu-email').value = '';
+  document.getElementById('nu-pass').value = '';
+  cargarUsuarios();
 }
 </script>
 </body>
