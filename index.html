@@ -55,14 +55,6 @@ header{
   font-size:13px; color:var(--ink-soft);
   white-space:nowrap;
 }
-.fb-header-btn{
-  width:34px; height:34px; border-radius:50%;
-  background:var(--indigo); color:#fff;
-  display:flex; align-items:center; justify-content:center;
-  flex-shrink:0; transition:background .15s;
-}
-.fb-header-btn:hover{ background:var(--indigo-deep); }
-.fb-header-btn svg{ width:16px; height:16px; fill:#fff; }
 .buscador{
   position:relative;
   flex:1;
@@ -114,7 +106,7 @@ main{
 /* --- hero --- */
 .hero{
   display:grid;
-  grid-template-columns: 2.1fr 1fr;
+  grid-template-columns: 1.4fr 1fr;
   gap:24px;
   margin-bottom:40px;
 }
@@ -125,7 +117,7 @@ main{
   overflow:hidden;
 }
 .hero-img{
-  height:440px;
+  height:320px;
   background:linear-gradient(135deg, var(--indigo) 0%, var(--indigo-deep) 100%);
   display:flex; align-items:center; justify-content:center;
   color:rgba(255,255,255,.35);
@@ -133,19 +125,19 @@ main{
   font-size:13px;
   letter-spacing:.05em;
 }
-.hero-texto{ padding:28px; }
+.hero-texto{ padding:24px; }
 .hero-texto h1{
   font-family:'Source Serif 4',serif;
   font-weight:700;
-  font-size:42px;
-  line-height:1.12;
-  margin-bottom:16px;
+  font-size:30px;
+  line-height:1.2;
+  margin-bottom:12px;
 }
 .hero-texto p{
   font-family:'Source Serif 4',serif;
   color:var(--ink-soft);
-  font-size:18px;
-  margin-bottom:16px;
+  font-size:16px;
+  margin-bottom:14px;
 }
 .meta{
   font-size:12px; color:var(--ink-soft);
@@ -299,24 +291,27 @@ main{
   border:1px solid var(--line);
   border-radius:4px;
   padding:18px;
+  display:block;
+  transition:border-color .15s;
 }
+.facebook-box:hover{ border-color:var(--indigo); }
 .facebook-box h2{
   font-family:'Space Grotesk',sans-serif;
   font-size:15px; margin-bottom:12px;
   display:flex; align-items:center;
+  color:var(--ink);
 }
 .facebook-box .fb-slot{
   background:#F3F2FA;
-  border:1px dashed #C7C1E3;
   border-radius:4px;
-  min-height:180px;
+  min-height:100px;
   display:flex; align-items:center; justify-content:center;
   flex-direction:column; gap:4px;
-  color:#8880B0;
+  color:var(--indigo);
   font-family:'Space Grotesk',sans-serif;
-  font-size:12px; text-align:center; padding:12px;
+  font-size:13px; font-weight:600; text-align:center; padding:12px;
 }
-.facebook-box .fb-slot span{ font-size:10px; letter-spacing:.05em; text-transform:uppercase; }
+.facebook-box .fb-slot span{ font-size:11px; font-weight:500; color:var(--ink-soft); text-transform:none; letter-spacing:normal; }
 
 /* --- footer --- */
 footer{
@@ -360,9 +355,6 @@ footer{
       <span class="limpiar" id="buscador-limpiar">✕</span>
     </div>
     <div class="fecha-hoy" id="fecha-hoy"></div>
-    <a href="https://www.facebook.com/Caletaoliviadigital" target="_blank" rel="noopener" class="fb-header-btn" title="Seguinos en Facebook">
-      <svg viewBox="0 0 24 24"><path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z"/></svg>
-    </a>
   </div>
 </header>
 
@@ -463,13 +455,13 @@ footer{
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
-    <div class="facebook-box">
+    <a href="https://www.facebook.com/Caletaoliviadigital" target="_blank" rel="noopener" class="facebook-box">
       <h2><span class="play-tri"></span>Seguinos en Facebook</h2>
       <div class="fb-slot">
-        <span>Widget de Facebook</span>
-        Acá va el botón / página de Facebook embebida
+        <span>Caleta Olivia Digital</span>
+        Ver la página en Facebook →
       </div>
-    </div>
+    </a>
 
     <div class="ad-slot">
       <span>Espacio publicitario</span>
