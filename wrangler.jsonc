@@ -1,1 +1,1 @@
-{ "name": "caleta-olivia-digital", "compatibility_date": "2026-01-01", "assets": { "directory": "./", "not_found_handling": "404-page" } }
+{ "name": "caleta-olivia-digital", "compatibility_date": "2026-01-01", "main": "worker.js", "assets": { "directory": "./", "binding": "ASSETS", "not_found_handling": "404-page" }, "r2_buckets": [ { "binding": "IMAGENES", "bucket_name": "caletaolivia" } ] } 
