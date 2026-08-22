@@ -152,14 +152,51 @@ article.nota-completa{
 .nota-card h3{ font-family:'Source Serif 4',serif; font-size:15px; line-height:1.3; }
 
 .sidebar{ display:flex; flex-direction:column; gap:24px; }
-.facebook-box{ background:var(--card); border:1px solid var(--line); border-radius:4px; padding:18px; }
-.facebook-box h2{ font-family:'Space Grotesk',sans-serif; font-size:15px; margin-bottom:12px; display:flex; align-items:center; }
-.fb-slot{
-  background:#F3F2FA; border:1px dashed #C7C1E3; border-radius:4px; min-height:180px;
-  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:4px;
-  color:#8880B0; font-family:'Space Grotesk',sans-serif; font-size:12px; text-align:center; padding:12px;
+.facebook-box{
+  background:linear-gradient(150deg, var(--indigo) 0%, var(--indigo-deep) 100%);
+  border-radius:6px;
+  padding:22px 20px;
+  display:block;
+  position:relative;
+  overflow:hidden;
+  transition:transform .15s;
 }
-.fb-slot span{ font-size:10px; letter-spacing:.05em; text-transform:uppercase; }
+.facebook-box::before{
+  content:'';
+  position:absolute; top:-40px; right:-40px;
+  width:130px; height:130px; border-radius:50%;
+  background:rgba(255,255,255,.06);
+}
+.facebook-box::after{
+  content:'';
+  position:absolute; bottom:-50px; left:-30px;
+  width:110px; height:110px; border-radius:50%;
+  background:rgba(0,179,176,.15);
+}
+.facebook-box:hover{ transform:translateY(-2px); }
+.facebook-box .fb-icono{
+  width:44px; height:44px; border-radius:50%;
+  background:#fff; color:var(--indigo);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:20px;
+  margin-bottom:12px; position:relative; z-index:1;
+}
+.facebook-box h2{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:16px; margin-bottom:4px;
+  color:#fff; position:relative; z-index:1;
+}
+.facebook-box .fb-sub{
+  color:rgba(255,255,255,.7); font-size:12px; margin-bottom:16px;
+  position:relative; z-index:1;
+}
+.facebook-box .fb-cta{
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--teal); color:#fff;
+  font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px;
+  padding:9px 16px; border-radius:20px;
+  position:relative; z-index:1;
+}
 
 .mas-leidas{ background:var(--card); border:1px solid var(--line); border-radius:4px; padding:20px; }
 .mas-leidas h2{ font-family:'Space Grotesk',sans-serif; font-size:16px; margin-bottom:16px; display:flex; align-items:center; }
@@ -231,13 +268,12 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
   </div>
 
   <aside class="sidebar">
-    <div class="facebook-box">
-      <h2><span class="play-tri"></span>Seguinos en Facebook</h2>
-      <div class="fb-slot">
-        <span>Widget de Facebook</span>
-        Acá va el botón / página de Facebook embebida
-      </div>
-    </div>
+    <a href="https://www.facebook.com/Caletaoliviadigital" target="_blank" rel="noopener" class="facebook-box">
+      <div class="fb-icono">f</div>
+      <h2>Caleta Olivia Digital</h2>
+      <div class="fb-sub">Seguinos para no perderte ninguna noticia</div>
+      <span class="fb-cta">Seguir en Facebook →</span>
+    </a>
 
     <div class="ad-slot">
       <span>Espacio publicitario</span>
@@ -341,6 +377,9 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
     `;
 
     cargarRelacionadas(n.categoria, n.id);
+
+    // suma una vista (no bloquea la carga de la página, se dispara en segundo plano)
+    sb.from('notas').update({ vistas: (n.vistas || 0) + 1 }).eq('id', n.id).then(() => {});
   }
 
   function mostrarNoEncontrada(){

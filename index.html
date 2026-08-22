@@ -294,31 +294,50 @@ main{
 }
 
 .facebook-box{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:4px;
-  padding:18px;
+  background:linear-gradient(150deg, var(--indigo) 0%, var(--indigo-deep) 100%);
+  border-radius:6px;
+  padding:22px 20px;
   display:block;
-  transition:border-color .15s;
+  position:relative;
+  overflow:hidden;
+  transition:transform .15s;
 }
-.facebook-box:hover{ border-color:var(--indigo); }
+.facebook-box::before{
+  content:'';
+  position:absolute; top:-40px; right:-40px;
+  width:130px; height:130px; border-radius:50%;
+  background:rgba(255,255,255,.06);
+}
+.facebook-box::after{
+  content:'';
+  position:absolute; bottom:-50px; left:-30px;
+  width:110px; height:110px; border-radius:50%;
+  background:rgba(0,179,176,.15);
+}
+.facebook-box:hover{ transform:translateY(-2px); }
+.facebook-box .fb-icono{
+  width:44px; height:44px; border-radius:50%;
+  background:#fff; color:var(--indigo);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:20px;
+  margin-bottom:12px; position:relative; z-index:1;
+}
 .facebook-box h2{
   font-family:'Space Grotesk',sans-serif;
-  font-size:15px; margin-bottom:12px;
-  display:flex; align-items:center;
-  color:var(--ink);
+  font-size:16px; margin-bottom:4px;
+  color:#fff; position:relative; z-index:1;
 }
-.facebook-box .fb-slot{
-  background:#F3F2FA;
-  border-radius:4px;
-  min-height:100px;
-  display:flex; align-items:center; justify-content:center;
-  flex-direction:column; gap:4px;
-  color:var(--indigo);
-  font-family:'Space Grotesk',sans-serif;
-  font-size:13px; font-weight:600; text-align:center; padding:12px;
+.facebook-box .fb-sub{
+  color:rgba(255,255,255,.7); font-size:12px; margin-bottom:16px;
+  position:relative; z-index:1;
 }
-.facebook-box .fb-slot span{ font-size:11px; font-weight:500; color:var(--ink-soft); text-transform:none; letter-spacing:normal; }
+.facebook-box .fb-cta{
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--teal); color:#fff;
+  font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px;
+  padding:9px 16px; border-radius:20px;
+  position:relative; z-index:1;
+}
 
 /* --- footer --- */
 footer{
@@ -398,11 +417,10 @@ footer{
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <a href="https://www.facebook.com/Caletaoliviadigital" target="_blank" rel="noopener" class="facebook-box">
-      <h2><span class="play-tri"></span>Seguinos en Facebook</h2>
-      <div class="fb-slot">
-        <span>Caleta Olivia Digital</span>
-        Ver la página en Facebook →
-      </div>
+      <div class="fb-icono">f</div>
+      <h2>Caleta Olivia Digital</h2>
+      <div class="fb-sub">Seguinos para no perderte ninguna noticia</div>
+      <span class="fb-cta">Seguir en Facebook →</span>
     </a>
 
     <div class="ad-slot">
@@ -412,11 +430,8 @@ footer{
 
     <div class="mas-leidas">
       <h2><span class="play-tri"></span>Lo más leído</h2>
-      <ol>
-        <li><a href="nota.html?id=10">Nota más leída número uno del ranking</a></li>
-        <li><a href="nota.html?id=11">Nota más leída número dos del ranking</a></li>
-        <li><a href="nota.html?id=12">Nota más leída número tres del ranking</a></li>
-        <li><a href="nota.html?id=13">Nota más leída número cuatro del ranking</a></li>
+      <ol id="lista-mas-leidas">
+        <li style="color:var(--ink-soft); font-size:13px;">Cargando...</li>
       </ol>
     </div>
 
@@ -522,6 +537,14 @@ footer{
     renderHero();
     renderGrilla();
     render(); // aplica filtro/búsqueda actual (vacío al inicio)
+    renderMasLeidas(data);
+  }
+
+  function renderMasLeidas(data){
+    const cont = document.getElementById('lista-mas-leidas');
+    const top = [...data].sort((a,b) => (b.vistas || 0) - (a.vistas || 0)).slice(0, 4);
+    if(top.length === 0){ cont.innerHTML = '<li style="color:var(--ink-soft); font-size:13px;">Todavía no hay datos.</li>'; return; }
+    cont.innerHTML = top.map(n => `<li><a href="nota.html?id=${n.id}">${n.titulo}</a></li>`).join('');
   }
 
   function renderHero(){
