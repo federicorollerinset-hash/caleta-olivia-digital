@@ -251,6 +251,12 @@ button, input, select, textarea{ font-family:inherit; }
             <label>Imagen principal</label>
             <div class="upload-box" onclick="document.getElementById('f-imagen').click()" id="upload-box-txt">Arrastrá una imagen o hacé clic para subirla</div>
             <input type="file" id="f-imagen" accept="image/*" style="display:none;">
+            <div style="margin-top:8px;">
+              <a href="#" onclick="toggleGaleria(); return false;" style="font-size:12px; color:var(--indigo); font-weight:600;" id="link-galeria">📷 Elegir de imágenes ya subidas</a>
+            </div>
+            <div id="galeria-imagenes" style="display:none; margin-top:10px; padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:4px; max-height:220px; overflow-y:auto;">
+              <div id="galeria-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(80px, 1fr)); gap:8px;"></div>
+            </div>
           </div>
           <div class="campo">
             <label>Cuerpo de la nota</label>
@@ -444,7 +450,47 @@ async function subirImagen(archivo){
   const resp = await fetch('/api/subir-imagen', { method:'POST', body: formData });
   if(!resp.ok) throw new Error('No se pudo subir la imagen');
   const data = await resp.json();
+
+  // la registramos en el banco de imágenes para poder reutilizarla después
+  sb.from('imagenes').insert({
+    url: data.url,
+    nombre_archivo: archivo.name,
+    subida_por: usuarioActual ? usuarioActual.nombre : null
+  }).then(() => {});
+
   return data.url;
+}
+
+// --- galería de imágenes ya subidas (banco reutilizable) ---
+let imagenGaleriaSeleccionada = null;
+
+async function toggleGaleria(){
+  const cont = document.getElementById('galeria-imagenes');
+  const abrir = cont.style.display === 'none';
+  cont.style.display = abrir ? 'block' : 'none';
+  if(abrir) await cargarGaleria();
+}
+
+async function cargarGaleria(){
+  const grid = document.getElementById('galeria-grid');
+  grid.innerHTML = '<div style="grid-column:1/-1; font-size:12px; color:var(--ink-soft);">Cargando...</div>';
+  const { data, error } = await sb.from('imagenes').select('*').order('created_at', {ascending:false}).limit(40);
+  if(error || !data || data.length === 0){
+    grid.innerHTML = '<div style="grid-column:1/-1; font-size:12px; color:var(--ink-soft);">Todavía no hay imágenes subidas.</div>';
+    return;
+  }
+  grid.innerHTML = data.map(img => `
+    <div onclick="elegirImagenGaleria('${img.url}')" style="cursor:pointer; border-radius:4px; overflow:hidden; border:2px solid transparent; aspect-ratio:1;" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='transparent'">
+      <div style="width:100%; height:100%; background-image:url('${img.url}'); background-size:cover; background-position:center;"></div>
+    </div>
+  `).join('');
+}
+
+function elegirImagenGaleria(url){
+  imagenGaleriaSeleccionada = url;
+  document.getElementById('f-imagen').value = '';
+  document.getElementById('upload-box-txt').textContent = '✓ imagen elegida de la galería';
+  document.getElementById('galeria-imagenes').style.display = 'none';
 }
 
 // --- cargar nota (borrador o pendiente) ---
@@ -479,6 +525,7 @@ async function guardarNota(estadoDestino){
   let imagen_url = null;
   try{
     if(archivoImg) imagen_url = await subirImagen(archivoImg);
+    else if(imagenGaleriaSeleccionada) imagen_url = imagenGaleriaSeleccionada;
   }catch(e){
     msg.style.color = '#C4382E';
     msg.textContent = 'La nota no se guardó: falló la subida de la imagen (¿ya está conectado el endpoint de R2?).';
@@ -542,6 +589,7 @@ function cancelarEdicion(){
   document.getElementById('f-categoria').value = 'Política';
   document.getElementById('f-imagen').value = '';
   document.getElementById('upload-box-txt').textContent = 'Arrastrá una imagen o hacé clic para subirla';
+  imagenGaleriaSeleccionada = null;
 }
 
 async function editarNota(id){
@@ -584,7 +632,10 @@ async function cambiarPosicion(id, nuevaPosicion){
 
 document.getElementById('f-imagen').addEventListener('change', (e) => {
   const nombre = e.target.files[0]?.name;
-  if(nombre) document.getElementById('upload-box-txt').textContent = '✓ ' + nombre;
+  if(nombre){
+    document.getElementById('upload-box-txt').textContent = '✓ ' + nombre;
+    imagenGaleriaSeleccionada = null;
+  }
 });
 
 // --- listados ---

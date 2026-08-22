@@ -157,9 +157,14 @@ main{
   background:var(--card);
   border:1px solid var(--line);
   border-radius:4px;
-  padding:16px;
+  overflow:hidden;
   display:flex; flex-direction:column;
 }
+.nota-mini-img{
+  height:110px;
+  background:#EDEBF7;
+}
+.nota-mini-cuerpo{ padding:16px; }
 .nota-mini .cat{
   font-family:'Space Grotesk',sans-serif;
   font-size:11px; font-weight:600;
@@ -571,10 +576,13 @@ footer{
       const catKey = categoriaKey(n.categoria);
       html += `
         <article class="nota-mini" data-cat="${catKey}">
-          <div class="cat" data-cat="${catKey}">${n.categoria}</div>
-          <h3><a href="nota.html?id=${n.id}">${n.titulo}</a></h3>
-          <div class="meta"><span>${tiempoRelativo(n.created_at)}</span></div>
-          ${etiquetasHtml(n.etiquetas)}
+          ${n.imagen_url ? `<div class="nota-mini-img" style="background-image:url('${n.imagen_url}'); background-size:cover; background-position:center;"></div>` : ''}
+          <div class="nota-mini-cuerpo">
+            <div class="cat" data-cat="${catKey}">${n.categoria}</div>
+            <h3><a href="nota.html?id=${n.id}">${n.titulo}</a></h3>
+            <div class="meta"><span>${tiempoRelativo(n.created_at)}</span></div>
+            ${etiquetasHtml(n.etiquetas)}
+          </div>
         </article>
       `;
     });
