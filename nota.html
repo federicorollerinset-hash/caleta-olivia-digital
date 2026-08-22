@@ -282,11 +282,8 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
 
     <div class="mas-leidas">
       <h2><span class="play-tri"></span>Lo más leído</h2>
-      <ol>
-        <li><a href="nota.html?id=10">Nota más leída número uno del ranking</a></li>
-        <li><a href="nota.html?id=11">Nota más leída número dos del ranking</a></li>
-        <li><a href="nota.html?id=12">Nota más leída número tres del ranking</a></li>
-        <li><a href="nota.html?id=13">Nota más leída número cuatro del ranking</a></li>
+      <ol id="lista-mas-leidas">
+        <li style="color:var(--ink-soft); font-size:13px;">Cargando...</li>
       </ol>
     </div>
 
@@ -380,6 +377,23 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
 
     // suma una vista (no bloquea la carga de la página, se dispara en segundo plano)
     sb.from('notas').update({ vistas: (n.vistas || 0) + 1 }).eq('id', n.id).then(() => {});
+
+    cargarMasLeidas();
+  }
+
+  async function cargarMasLeidas(){
+    const cont = document.getElementById('lista-mas-leidas');
+    if(!cont) return;
+    const { data, error } = await sb.from('notas')
+      .select('id, titulo, vistas')
+      .eq('estado','publicada')
+      .order('vistas', {ascending:false})
+      .limit(4);
+    if(error || !data || data.length === 0){
+      cont.innerHTML = '<li style="color:var(--ink-soft); font-size:13px;">Todavía no hay datos.</li>';
+      return;
+    }
+    cont.innerHTML = data.map(n => `<li><a href="nota.html?id=${n.id}">${n.titulo}</a></li>`).join('');
   }
 
   function mostrarNoEncontrada(){
