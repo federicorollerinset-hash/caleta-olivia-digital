@@ -273,9 +273,10 @@ button, input, select, textarea{ font-family:inherit; }
               <button type="button" class="btn-embed" onclick="insertarEmbed('yt')">▶️ YouTube</button>
               <button type="button" class="btn-embed" onclick="insertarEmbed('tw')">🐦 Twitter/X</button>
               <button type="button" class="btn-embed" onclick="insertarEmbed('img')">🖼️ Subir imagen</button>
+              <button type="button" class="btn-embed" onclick="insertarLink()">🔗 Link</button>
             </div>
             <textarea id="f-cuerpo" placeholder="Escribí el contenido completo acá..."></textarea>
-            <div class="ayuda-embeds">Para incrustar un posteo, video o imagen dentro del texto, ubicá el cursor donde querés que aparezca y usá los botones de arriba. Con "Subir imagen" elegís el archivo desde tu compu, igual que con la imagen principal. Se va a insertar un renglón como <code>[yt]URL|Epígrafe[/yt]</code> — dejalo en su propio renglón, con líneas en blanco antes y después.</div>
+            <div class="ayuda-embeds">Para incrustar un posteo, video o imagen dentro del texto, ubicá el cursor donde querés que aparezca y usá los botones de arriba. Con "Subir imagen" elegís el archivo desde tu compu, igual que con la imagen principal. Se va a insertar un renglón como <code>[yt]URL|Epígrafe[/yt]</code> — dejalo en su propio renglón, con líneas en blanco antes y después. Para citar una nota o fuente dentro de una oración, seleccioná la palabra que querés convertir en link (opcional) y usá el botón <code>Link</code> — se inserta como <code>[link]URL|Texto[/link]</code> directo donde esté el cursor, sin renglones en blanco.</div>
           </div>
           <div class="fila">
             <div class="campo">
@@ -424,6 +425,31 @@ function insertarCodigoEnCuerpo(tipo, url, epigrafe){
   ta.value = antes + insercion + despues;
   ta.focus();
   const nuevaPos = (antes + insercion).length;
+  ta.setSelectionRange(nuevaPos, nuevaPos);
+}
+
+// Inserta [link]URL|Texto[/link] inline, en el lugar exacto del cursor,
+// sin forzar renglones en blanco (a diferencia de fb/yt/tw/img, que son
+// bloques). Pensado para citar una nota o fuente dentro de una oración.
+async function insertarLink(){
+  const url = prompt('Pegá la URL de la nota o fuente que querés citar:');
+  if(!url || !url.trim()) return;
+
+  const ta = document.getElementById('f-cuerpo');
+  const inicio = ta.selectionStart ?? ta.value.length;
+  const fin = ta.selectionEnd ?? ta.value.length;
+  const seleccionado = ta.value.slice(inicio, fin);
+
+  const texto = prompt('Texto que se va a ver como link (por ejemplo "La Opinión Austral"):', seleccionado) || url.trim();
+  if(!texto.trim()) return;
+
+  const codigo = `[link]${url.trim()}|${texto.trim()}[/link]`;
+  const antes = ta.value.slice(0, inicio);
+  const despues = ta.value.slice(fin);
+
+  ta.value = antes + codigo + despues;
+  ta.focus();
+  const nuevaPos = (antes + codigo).length;
   ta.setSelectionRange(nuevaPos, nuevaPos);
 }
 
