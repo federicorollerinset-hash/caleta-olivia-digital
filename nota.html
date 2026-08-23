@@ -112,6 +112,11 @@ article.nota-completa{
   display:block; padding:14px 16px; border:1px solid var(--line); border-radius:6px;
   color:var(--indigo); font-size:14px; word-break:break-all; background:var(--bg);
 }
+.cuerpo-nota .link-cita{
+  color:var(--indigo); font-weight:600;
+  text-decoration:underline; text-decoration-color:var(--teal); text-underline-offset:2px;
+}
+.cuerpo-nota .link-cita:hover{ color:var(--indigo-deep); }
 .cuerpo-nota p:first-of-type::first-letter{
   font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:52px; color:var(--indigo);
   float:left; line-height:.85; padding-right:8px; padding-top:4px;
@@ -385,9 +390,24 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
     return null;
   }
 
+  // Reemplaza [link]URL|Texto[/link] dentro de un párrafo por un <a> real.
+  // A diferencia de fb/yt/tw/img (que ocupan la línea entera), esto puede
+  // aparecer en medio de una oración — pensado para citar una nota o fuente.
+  function procesarLinksInline(texto){
+    return texto.replace(/\[link\]([\s\S]*?)\[\/link\]/gi, (_, contenido) => {
+      const partes = contenido.split('|');
+      const url = (partes[0] || '').trim();
+      const textoLink = partes.slice(1).join('|').trim() || url;
+      if(!url) return '';
+      return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="link-cita">${escapeHtml(textoLink)}</a>`;
+    });
+  }
+
   function parrafosHtml(cuerpo){
     return (cuerpo || '').split(/\n+/).map(l => l.trim()).filter(Boolean).map(linea => {
-      return lineaAEmbed(linea) || `<p>${linea}</p>`;
+      const embed = lineaAEmbed(linea);
+      if(embed) return embed;
+      return `<p>${procesarLinksInline(linea)}</p>`;
     }).join('');
   }
 
