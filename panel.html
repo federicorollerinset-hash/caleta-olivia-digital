@@ -100,6 +100,18 @@ button, input, select, textarea{ font-family:inherit; }
   min-height:160px; resize:vertical;
 }
 .barra-embeds{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+.barra-formato{ display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid var(--line); }
+.barra-formato-label{ font-size:11px; color:var(--ink-soft); margin-right:6px; }
+.btn-formato{
+  width:32px; height:32px; padding:0; background:var(--card); border:1px solid var(--line); border-radius:4px;
+  font-size:14px; cursor:pointer; color:var(--ink); display:flex; align-items:center; justify-content:center;
+}
+.btn-formato:hover{ background:var(--bg); border-color:#c7c1e3; }
+.btn-formato.formato-negrita{ font-weight:700; }
+.btn-formato.formato-subrayado{ text-decoration:underline; }
+.btn-formato.formato-resaltado{ background:#FFF3A0; border-color:#EAD97A; }
+.btn-formato.formato-resaltado:hover{ background:#FCEB6E; }
+.separador-toolbar{ width:1px; height:20px; background:var(--line); margin:0 6px; }
 .btn-embed{
   padding:6px 12px; background:var(--bg); border:1px solid var(--line); border-radius:4px;
   font-size:12px; font-weight:600; cursor:pointer; color:var(--ink);
@@ -268,6 +280,12 @@ button, input, select, textarea{ font-family:inherit; }
           </div>
           <div class="campo">
             <label>Cuerpo de la nota</label>
+            <div class="barra-formato">
+              <span class="barra-formato-label">Formato</span>
+              <button type="button" class="btn-formato formato-negrita" onclick="formatearSeleccion('b')" title="Negrita">N</button>
+              <button type="button" class="btn-formato formato-subrayado" onclick="formatearSeleccion('u')" title="Subrayado">S</button>
+              <button type="button" class="btn-formato formato-resaltado" onclick="formatearSeleccion('mark')" title="Resaltar en amarillo">🖍️</button>
+            </div>
             <div class="barra-embeds">
               <button type="button" class="btn-embed" onclick="insertarEmbed('fb')">📘 Facebook</button>
               <button type="button" class="btn-embed" onclick="insertarEmbed('yt')">▶️ YouTube</button>
@@ -276,7 +294,7 @@ button, input, select, textarea{ font-family:inherit; }
               <button type="button" class="btn-embed" onclick="insertarLink()">🔗 Link</button>
             </div>
             <textarea id="f-cuerpo" placeholder="Escribí el contenido completo acá..."></textarea>
-            <div class="ayuda-embeds">Para incrustar un posteo, video o imagen dentro del texto, ubicá el cursor donde querés que aparezca y usá los botones de arriba. Con "Subir imagen" elegís el archivo desde tu compu, igual que con la imagen principal. Se va a insertar un renglón como <code>[yt]URL|Epígrafe[/yt]</code> — dejalo en su propio renglón, con líneas en blanco antes y después. Para citar una nota o fuente dentro de una oración, seleccioná la palabra que querés convertir en link (opcional) y usá el botón <code>Link</code> — se inserta como <code>[link]URL|Texto[/link]</code> directo donde esté el cursor, sin renglones en blanco.</div>
+            <div class="ayuda-embeds">Para dar formato, seleccioná el texto y usá <strong>N</strong> (negrita), <strong><u>S</u></strong> (subrayado) o 🖍️ (resaltar en amarillo). Para incrustar un posteo, video o imagen, ubicá el cursor donde querés que aparezca y usá los botones de la fila de abajo. Con "Subir imagen" elegís el archivo desde tu compu, igual que con la imagen principal. Se va a insertar un renglón como <code>[yt]URL|Epígrafe[/yt]</code> — dejalo en su propio renglón, con líneas en blanco antes y después. Para citar una nota o fuente dentro de una oración, seleccioná la palabra que querés convertir en link (opcional) y usá el botón <code>Link</code> — se inserta como <code>[link]URL|Texto[/link]</code> directo donde esté el cursor, sin renglones en blanco.</div>
           </div>
           <div class="fila">
             <div class="campo">
@@ -426,6 +444,26 @@ function insertarCodigoEnCuerpo(tipo, url, epigrafe){
   ta.focus();
   const nuevaPos = (antes + insercion).length;
   ta.setSelectionRange(nuevaPos, nuevaPos);
+}
+
+// Envuelve el texto seleccionado del cuerpo con la etiqueta de formato elegida
+// ([b], [u] o [mark]). Si no hay nada seleccionado, avisa en vez de insertar
+// una etiqueta vacía.
+function formatearSeleccion(tipo){
+  const ta = document.getElementById('f-cuerpo');
+  const inicio = ta.selectionStart;
+  const fin = ta.selectionEnd;
+  const seleccionado = ta.value.slice(inicio, fin);
+
+  if(!seleccionado){
+    alert('Primero seleccioná el texto al que le querés dar formato.');
+    return;
+  }
+
+  const nuevoTexto = `[${tipo}]${seleccionado}[/${tipo}]`;
+  ta.value = ta.value.slice(0, inicio) + nuevoTexto + ta.value.slice(fin);
+  ta.focus();
+  ta.setSelectionRange(inicio, inicio + nuevoTexto.length);
 }
 
 // Inserta [link]URL|Texto[/link] inline, en el lugar exacto del cursor,

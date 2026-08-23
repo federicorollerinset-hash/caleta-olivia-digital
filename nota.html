@@ -117,6 +117,9 @@ article.nota-completa{
   text-decoration:underline; text-decoration-color:var(--teal); text-underline-offset:2px;
 }
 .cuerpo-nota .link-cita:hover{ color:var(--indigo-deep); }
+.cuerpo-nota mark.resaltado{
+  background:#FFF3A0; color:inherit; padding:0 3px; border-radius:2px;
+}
 .cuerpo-nota p:first-of-type::first-letter{
   font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:52px; color:var(--indigo);
   float:left; line-height:.85; padding-right:8px; padding-top:4px;
@@ -403,11 +406,23 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
     });
   }
 
+  // Reemplaza [b], [u] y [mark] por sus etiquetas de formato reales.
+  function procesarFormatoInline(texto){
+    texto = texto.replace(/\[b\]([\s\S]*?)\[\/b\]/gi, '<strong>$1</strong>');
+    texto = texto.replace(/\[u\]([\s\S]*?)\[\/u\]/gi, '<u>$1</u>');
+    texto = texto.replace(/\[mark\]([\s\S]*?)\[\/mark\]/gi, '<mark class="resaltado">$1</mark>');
+    return texto;
+  }
+
+  function procesarInline(texto){
+    return procesarFormatoInline(procesarLinksInline(texto));
+  }
+
   function parrafosHtml(cuerpo){
     return (cuerpo || '').split(/\n+/).map(l => l.trim()).filter(Boolean).map(linea => {
       const embed = lineaAEmbed(linea);
       if(embed) return embed;
-      return `<p>${procesarLinksInline(linea)}</p>`;
+      return `<p>${procesarInline(linea)}</p>`;
     }).join('');
   }
 
