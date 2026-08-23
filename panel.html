@@ -756,8 +756,12 @@ async function editarNota(id){
 
 async function borrarNota(id, titulo){
   if(!confirm(`¿Borrar la nota "${titulo}"? Esta acción no se puede deshacer.`)) return;
-  const { error } = await sb.from('notas').delete().eq('id', id);
+  const { data, error } = await sb.from('notas').delete().eq('id', id).select();
   if(error){ alert('Error al borrar: ' + error.message); return; }
+  if(!data || data.length === 0){
+    alert('No se pudo borrar la nota. Probablemente falta el permiso de borrado (política DELETE) en la tabla "notas" de Supabase — Supabase no tira error, simplemente no borra nada.');
+    return;
+  }
   cargarMisNotas();
   cargarPublicadas();
 }
