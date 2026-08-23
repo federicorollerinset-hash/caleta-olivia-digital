@@ -272,10 +272,10 @@ button, input, select, textarea{ font-family:inherit; }
               <button type="button" class="btn-embed" onclick="insertarEmbed('fb')">📘 Facebook</button>
               <button type="button" class="btn-embed" onclick="insertarEmbed('yt')">▶️ YouTube</button>
               <button type="button" class="btn-embed" onclick="insertarEmbed('tw')">🐦 Twitter/X</button>
-              <button type="button" class="btn-embed" onclick="insertarEmbed('img')">🖼️ Imagen</button>
+              <button type="button" class="btn-embed" onclick="insertarEmbed('img')">🖼️ Subir imagen</button>
             </div>
             <textarea id="f-cuerpo" placeholder="Escribí el contenido completo acá..."></textarea>
-            <div class="ayuda-embeds">Para incrustar un posteo, video o imagen dentro del texto, ubicá el cursor donde querés que aparezca y usá los botones de arriba. Se va a insertar un renglón como <code>[yt]URL|Epígrafe[/yt]</code> — dejalo en su propio renglón, con líneas en blanco antes y después.</div>
+            <div class="ayuda-embeds">Para incrustar un posteo, video o imagen dentro del texto, ubicá el cursor donde querés que aparezca y usá los botones de arriba. Con "Subir imagen" elegís el archivo desde tu compu, igual que con la imagen principal. Se va a insertar un renglón como <code>[yt]URL|Epígrafe[/yt]</code> — dejalo en su propio renglón, con líneas en blanco antes y después.</div>
           </div>
           <div class="fila">
             <div class="campo">
@@ -368,16 +368,49 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let usuarioActual = null; // { id, nombre, email, rol }
 
 // Inserta un renglón [tipo]URL|Epígrafe[/tipo] en el cursor del textarea de cuerpo.
-function insertarEmbed(tipo){
-  const nombres = { fb:'Facebook', yt:'YouTube', tw:'Twitter/X', img:'imagen' };
-  const url = prompt(`Pegá la URL del posteo/video de ${nombres[tipo]}${tipo === 'img' ? ' (o el link directo al archivo)' : ''}:`);
-  if(!url || !url.trim()) return;
-  const epigrafe = prompt('Epígrafe (opcional, dejalo vacío si no querés poner uno):') || '';
+async function insertarEmbed(tipo){
+  const nombres = { fb:'Facebook', yt:'YouTube', tw:'Twitter/X' };
 
+  let url;
+  if(tipo === 'img'){
+    url = await elegirYSubirImagenEmbed();
+    if(!url) return;
+  } else {
+    url = prompt(`Pegá la URL del posteo/video de ${nombres[tipo]}:`);
+    if(!url || !url.trim()) return;
+    url = url.trim();
+  }
+
+  const epigrafe = prompt('Epígrafe (opcional, dejalo vacío si no querés poner uno):') || '';
+  insertarCodigoEnCuerpo(tipo, url, epigrafe.trim());
+}
+
+// Abre el selector de archivos, sube la imagen elegida a R2 y devuelve su URL pública.
+function elegirYSubirImagenEmbed(){
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async () => {
+      const archivo = input.files[0];
+      if(!archivo){ resolve(null); return; }
+      try{
+        const url = await subirImagen(archivo);
+        resolve(url);
+      }catch(e){
+        alert('No se pudo subir la imagen. Probá de nuevo.');
+        resolve(null);
+      }
+    };
+    input.click();
+  });
+}
+
+function insertarCodigoEnCuerpo(tipo, url, epigrafe){
   const ta = document.getElementById('f-cuerpo');
-  const codigo = epigrafe.trim()
-    ? `[${tipo}]${url.trim()}|${epigrafe.trim()}[/${tipo}]`
-    : `[${tipo}]${url.trim()}[/${tipo}]`;
+  const codigo = epigrafe
+    ? `[${tipo}]${url}|${epigrafe}[/${tipo}]`
+    : `[${tipo}]${url}[/${tipo}]`;
 
   const inicio = ta.selectionStart ?? ta.value.length;
   const fin = ta.selectionEnd ?? ta.value.length;
