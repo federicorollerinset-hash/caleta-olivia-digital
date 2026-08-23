@@ -99,6 +99,14 @@ button, input, select, textarea{ font-family:inherit; }
   width:100%; padding:12px; border:1px solid var(--line); border-radius:4px; font-size:14px;
   min-height:160px; resize:vertical;
 }
+.barra-embeds{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+.btn-embed{
+  padding:6px 12px; background:var(--bg); border:1px solid var(--line); border-radius:4px;
+  font-size:12px; font-weight:600; cursor:pointer; color:var(--ink);
+}
+.btn-embed:hover{ background:var(--line); }
+.ayuda-embeds{ font-size:12px; color:var(--ink-soft); margin-top:8px; line-height:1.5; }
+.ayuda-embeds code{ background:var(--bg); padding:1px 5px; border-radius:3px; }
 .upload-box{
   border:1px dashed #C7C1E3; border-radius:4px; padding:24px; text-align:center;
   color:var(--ink-soft); font-size:13px; background:#F3F2FA; margin-bottom:16px; cursor:pointer;
@@ -260,7 +268,14 @@ button, input, select, textarea{ font-family:inherit; }
           </div>
           <div class="campo">
             <label>Cuerpo de la nota</label>
+            <div class="barra-embeds">
+              <button type="button" class="btn-embed" onclick="insertarEmbed('fb')">📘 Facebook</button>
+              <button type="button" class="btn-embed" onclick="insertarEmbed('yt')">▶️ YouTube</button>
+              <button type="button" class="btn-embed" onclick="insertarEmbed('tw')">🐦 Twitter/X</button>
+              <button type="button" class="btn-embed" onclick="insertarEmbed('img')">🖼️ Imagen</button>
+            </div>
             <textarea id="f-cuerpo" placeholder="Escribí el contenido completo acá..."></textarea>
+            <div class="ayuda-embeds">Para incrustar un posteo, video o imagen dentro del texto, ubicá el cursor donde querés que aparezca y usá los botones de arriba. Se va a insertar un renglón como <code>[yt]URL|Epígrafe[/yt]</code> — dejalo en su propio renglón, con líneas en blanco antes y después.</div>
           </div>
           <div class="fila">
             <div class="campo">
@@ -351,6 +366,33 @@ const SUPABASE_KEY = 'sb_publishable_HJbQIiqaB6MGWnfTq0GlHw_dDO7tbAe';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let usuarioActual = null; // { id, nombre, email, rol }
+
+// Inserta un renglón [tipo]URL|Epígrafe[/tipo] en el cursor del textarea de cuerpo.
+function insertarEmbed(tipo){
+  const nombres = { fb:'Facebook', yt:'YouTube', tw:'Twitter/X', img:'imagen' };
+  const url = prompt(`Pegá la URL del posteo/video de ${nombres[tipo]}${tipo === 'img' ? ' (o el link directo al archivo)' : ''}:`);
+  if(!url || !url.trim()) return;
+  const epigrafe = prompt('Epígrafe (opcional, dejalo vacío si no querés poner uno):') || '';
+
+  const ta = document.getElementById('f-cuerpo');
+  const codigo = epigrafe.trim()
+    ? `[${tipo}]${url.trim()}|${epigrafe.trim()}[/${tipo}]`
+    : `[${tipo}]${url.trim()}[/${tipo}]`;
+
+  const inicio = ta.selectionStart ?? ta.value.length;
+  const fin = ta.selectionEnd ?? ta.value.length;
+  const antes = ta.value.slice(0, inicio);
+  const despues = ta.value.slice(fin);
+
+  const necesitaSaltoAntes = antes.length > 0 && !antes.endsWith('\n');
+  const necesitaSaltoDespues = despues.length > 0 && !despues.startsWith('\n');
+  const insercion = (necesitaSaltoAntes ? '\n\n' : '') + codigo + '\n' + (necesitaSaltoDespues ? '\n' : '');
+
+  ta.value = antes + insercion + despues;
+  ta.focus();
+  const nuevaPos = (antes + insercion).length;
+  ta.setSelectionRange(nuevaPos, nuevaPos);
+}
 
 async function sha256(texto){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
