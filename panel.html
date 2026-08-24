@@ -268,6 +268,10 @@ button, input, select, textarea{ font-family:inherit; }
             </div>
           </div>
           <div class="campo">
+            <label>Firma (opcional)</label>
+            <input type="text" id="f-firma" placeholder="Dejalo vacío para firmar como &quot;Redacción&quot;">
+          </div>
+          <div class="campo">
             <label>Imagen principal</label>
             <div class="upload-box" onclick="document.getElementById('f-imagen').click()" id="upload-box-txt">Arrastrá una imagen o hacé clic para subirla</div>
             <input type="file" id="f-imagen" accept="image/*" style="display:none;">
@@ -658,6 +662,7 @@ async function guardarNota(estadoDestino){
   const titulo = document.getElementById('f-titulo').value.trim();
   const bajada = document.getElementById('f-bajada').value.trim();
   const categoria = document.getElementById('f-categoria').value;
+  const firma = document.getElementById('f-firma').value.trim();
   const cuerpo = document.getElementById('f-cuerpo').value.trim();
   const etiquetasRaw = document.getElementById('f-etiquetas').value.trim();
   const posicion = document.getElementById('f-posicion').value;
@@ -694,6 +699,7 @@ async function guardarNota(estadoDestino){
     titulo, bajada, categoria, cuerpo, etiquetas,
     estado: estadoDestino,
     posicion: estadoDestino === 'publicada' ? posicion : 'regular',
+    autor_nombre: firma || 'Redacción',
     updated_at: new Date().toISOString()
   };
   if(imagen_url) datos.imagen_url = imagen_url;
@@ -709,7 +715,6 @@ async function guardarNota(estadoDestino){
     ({ error } = await sb.from('notas').update(datos).eq('id', editandoId));
   } else {
     datos.autor_id = usuarioActual.id;
-    datos.autor_nombre = usuarioActual.nombre;
     ({ error } = await sb.from('notas').insert(datos));
   }
 
@@ -734,6 +739,7 @@ function cancelarEdicion(){
   document.getElementById('btn-cancelar-edicion').style.display = 'none';
   document.getElementById('f-titulo').value = '';
   document.getElementById('f-bajada').value = '';
+  document.getElementById('f-firma').value = '';
   document.getElementById('f-cuerpo').value = '';
   document.getElementById('f-etiquetas').value = '';
   document.getElementById('f-posicion').value = 'regular';
@@ -753,6 +759,7 @@ async function editarNota(id){
   document.getElementById('btn-cancelar-edicion').style.display = 'inline-block';
   document.getElementById('f-titulo').value = n.titulo || '';
   document.getElementById('f-bajada').value = n.bajada || '';
+  document.getElementById('f-firma').value = (n.autor_nombre && n.autor_nombre !== 'Redacción') ? n.autor_nombre : '';
   document.getElementById('f-cuerpo').value = n.cuerpo || '';
   document.getElementById('f-categoria').value = n.categoria || 'Política';
   document.getElementById('f-etiquetas').value = (n.etiquetas || []).join(', ');
