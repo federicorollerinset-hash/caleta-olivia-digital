@@ -491,6 +491,18 @@ async function insertarLink(){
   ta.setSelectionRange(nuevaPos, nuevaPos);
 }
 
+// Escapa un string para poder insertarlo dentro de un atributo HTML
+// delimitado por comillas dobles (como onclick="..."). Sin esto, un
+// título de nota con comillas rompe el atributo a la mitad.
+function escapeAttr(str){
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 async function sha256(texto){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
@@ -812,7 +824,7 @@ async function cargarMisNotas(){
       ${badgeEstado(n.estado)}
       <div class="acciones-fila">
         <button class="btn-editar" onclick="editarNota('${n.id}')">Editar</button>
-        <button class="btn-borrar" onclick="borrarNota('${n.id}', ${JSON.stringify(n.titulo)})">Borrar</button>
+        <button class="btn-borrar" onclick="borrarNota('${n.id}', ${escapeAttr(JSON.stringify(n.titulo))})">Borrar</button>
       </div>
     </div>
   `).join('');
@@ -838,7 +850,7 @@ async function cargarPublicadas(){
       </select>
       <div class="acciones-fila">
         <button class="btn-editar" onclick="editarNota('${n.id}')">Editar</button>
-        <button class="btn-borrar" onclick="borrarNota('${n.id}', ${JSON.stringify(n.titulo)})">Borrar</button>
+        <button class="btn-borrar" onclick="borrarNota('${n.id}', ${escapeAttr(JSON.stringify(n.titulo))})">Borrar</button>
       </div>
     </div>
   `).join('');
