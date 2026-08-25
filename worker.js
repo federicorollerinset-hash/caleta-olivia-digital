@@ -1,9 +1,11 @@
 // ============================================================
 // CALETA OLIVIA DIGITAL — Cloudflare Worker
 // Sirve el diario (assets estáticos), el endpoint de subida de
-// imágenes a R2, y la pestaña /panoramasantacruz (ex "Apertura"),
+// imágenes a R2, la pestaña /panoramasantacruz (ex "Apertura"),
 // que lee las portadas de los diarios de Santa Cruz del lado del
-// servidor y las muestra con la identidad visual del sitio.
+// servidor y las muestra con la identidad visual del sitio, y
+// los meta tags de Open Graph dinámicos para /nota.html (para
+// que Facebook, WhatsApp, etc. muestren título/imagen reales).
 // ============================================================
 
 const SOURCES = [
@@ -336,6 +338,89 @@ setInterval(loadAll, AUTO_REFRESH_MS);
 </body>
 </html>`;
 
+// ============================================================
+// OG TAGS DINÁMICOS PARA /nota.html
+// Facebook (y WhatsApp, Twitter, Slack, etc) no ejecutan JS:
+// leen el HTML crudo. Como nota.html arma el título/imagen con
+// JS del lado del cliente, hay que inyectar los meta tags acá,
+// en el servidor, antes de devolver la página.
+// ============================================================
+
+const SUPABASE_URL = 'https://rmbutukkldktjknvhizj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_HJbQIiqaB6MGWnfTq0GlHw_dDO7tbAe';
+
+function escapeAttr(str) {
+  return (str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+async function obtenerNotaParaOg(id) {
+  const url = `${SUPABASE_URL}/rest/v1/notas?id=eq.${encodeURIComponent(id)}&estado=eq.publicada&select=titulo,bajada,imagen_url&limit=1`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`
+    }
+  });
+  if (!res.ok) return null;
+  const rows = await res.json();
+  return rows[0] || null;
+}
+
+async function handleNotaHtml(request, env, url) {
+  const assetResponse = await env.ASSETS.fetch(request);
+  const id = url.searchParams.get('id');
+  if (!id) return assetResponse;
+
+  let nota = null;
+  try {
+    nota = await obtenerNotaParaOg(id);
+  } catch (e) {
+    return assetResponse;
+  }
+  if (!nota) return assetResponse;
+
+  const html = await assetResponse.text();
+
+  const titulo = escapeAttr(nota.titulo || 'Caleta Olivia Digital');
+  const descripcion = escapeAttr(
+    nota.bajada || 'Noticias de Caleta Olivia y Santa Cruz.'
+  );
+  const notaUrl = escapeAttr(url.href);
+
+  let metaTags = `
+<meta property="og:type" content="article">
+<meta property="og:title" content="${titulo}">
+<meta property="og:description" content="${descripcion}">
+<meta property="og:url" content="${notaUrl}">
+<meta property="og:site_name" content="Caleta Olivia Digital">
+<meta name="twitter:card" content="${nota.imagen_url ? 'summary_large_image' : 'summary'}">
+<meta name="twitter:title" content="${titulo}">
+<meta name="twitter:description" content="${descripcion}">
+`;
+
+  if (nota.imagen_url) {
+    const imagen = escapeAttr(nota.imagen_url);
+    metaTags += `<meta property="og:image" content="${imagen}">\n<meta name="twitter:image" content="${imagen}">\n`;
+  }
+
+  const newHtml = html.replace(
+    /<title>[\s\S]*?<\/title>/,
+    `<title>${nota.titulo} — Caleta Olivia Digital</title>${metaTags}`
+  );
+
+  const headers = new Headers(assetResponse.headers);
+  headers.delete('content-length');
+
+  return new Response(newHtml, {
+    status: assetResponse.status,
+    headers
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -374,6 +459,10 @@ export default {
 
     if (url.pathname === '/api/panorama-noticias') {
       return handlePanoramaApi(request, ctx);
+    }
+
+    if (url.pathname === '/nota.html') {
+      return handleNotaHtml(request, env, url);
     }
 
     return env.ASSETS.fetch(request);
