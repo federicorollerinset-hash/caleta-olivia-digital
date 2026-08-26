@@ -198,6 +198,22 @@ button, input, select, textarea{ font-family:inherit; }
 .stat-card .num{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:28px; color:var(--indigo); }
 .stat-card .lbl{ font-size:12px; color:var(--ink-soft); margin-top:4px; }
 
+/* --- estadísticas de lectura (admin/editor) --- */
+.rank-num{
+  width:28px; height:28px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:12px;
+  background:var(--bg); color:var(--ink-soft);
+}
+.rank-num.top1{ background:#FBE3A8; color:#8A5A00; }
+.rank-num.top2{ background:#E4E2EE; color:#54506E; }
+.rank-num.top3{ background:#F3D9C4; color:#8A481B; }
+.badge-vistas{
+  font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13px;
+  padding:6px 12px; border-radius:20px; white-space:nowrap; background:#EDE7FB; color:var(--indigo);
+  display:flex; align-items:center; gap:5px; flex-shrink:0;
+}
+
 @media (max-width:760px){
   .panel-nav{ width:60px; }
   .panel-nav a span.txt{ display:none; }
@@ -243,6 +259,7 @@ button, input, select, textarea{ font-family:inherit; }
       <a class="activa" data-vista="v-cargar"><span class="play-tri"></span><span class="txt">Cargar nota</span></a>
       <a data-vista="v-mis-notas"><span class="play-tri"></span><span class="txt">Mis notas</span></a>
       <a data-vista="v-publicadas"><span class="play-tri"></span><span class="txt">Publicadas</span></a>
+      <a data-vista="v-estadisticas" id="nav-estadisticas" style="display:none;"><span class="play-tri"></span><span class="txt">Estadísticas</span></a>
       <div class="separador" id="separador-admin" style="display:none;"></div>
       <a data-vista="v-usuarios" id="nav-usuarios" style="display:none;"><span class="play-tri"></span><span class="txt">Usuarios</span></a>
     </nav>
@@ -337,6 +354,14 @@ button, input, select, textarea{ font-family:inherit; }
         <h2>Publicadas</h2>
         <p class="subt">Notas visibles en la portada del sitio. Elegí su posición destacada, editalas o borralas.</p>
         <div class="tabla-notas" id="lista-publicadas"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
+      </section>
+
+      <!-- ESTADÍSTICAS (admin/editor) -->
+      <section class="vista" id="v-estadisticas">
+        <h2>Estadísticas de lectura</h2>
+        <p class="subt">Vistas acumuladas de las notas publicadas en el sitio.</p>
+        <div class="tarjetas-stats" id="stats-lecturas"></div>
+        <div class="tabla-notas" id="ranking-lecturas"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
       </section>
 
       <!-- USUARIOS (solo admin) -->
@@ -551,23 +576,28 @@ function mostrarPanel(data){
 
   const badge = document.getElementById('rol-badge');
   const navUsuarios = document.getElementById('nav-usuarios');
+  const navEstadisticas = document.getElementById('nav-estadisticas');
   const separador = document.getElementById('separador-admin');
 
   badge.classList.remove('rol-admin','rol-editor','rol-redactor');
   if(data.rol === 'admin'){
     badge.textContent = 'Admin'; badge.classList.add('rol-admin');
     navUsuarios.style.display = 'flex'; separador.style.display = 'block';
+    navEstadisticas.style.display = 'flex';
   } else if(data.rol === 'editor'){
     badge.textContent = 'Editor'; badge.classList.add('rol-editor');
     navUsuarios.style.display = 'none'; separador.style.display = 'none';
+    navEstadisticas.style.display = 'flex';
   } else {
     badge.textContent = 'Redactor'; badge.classList.add('rol-redactor');
     navUsuarios.style.display = 'none'; separador.style.display = 'none';
+    navEstadisticas.style.display = 'none';
   }
 
   cargarMisNotas();
   cargarPublicadas();
   if(data.rol === 'admin') cargarUsuarios();
+  if(data.rol === 'admin' || data.rol === 'editor') cargarEstadisticas();
 }
 
 function salir(){
@@ -862,6 +892,43 @@ async function cargarPublicadas(){
       </div>
     </div>
   `).join('');
+}
+
+async function cargarEstadisticas(){
+  const stats = document.getElementById('stats-lecturas');
+  const cont = document.getElementById('ranking-lecturas');
+  const { data, error } = await sb.from('notas').select('*').eq('estado','publicada').order('vistas', {ascending:false});
+  if(error || !data){ cont.innerHTML = '<div style="padding:20px;">Error al cargar estadísticas.</div>'; return; }
+  if(data.length === 0){
+    stats.innerHTML = '';
+    cont.innerHTML = '<div style="padding:20px; color:var(--ink-soft); font-size:13px;">Todavía no hay notas publicadas.</div>';
+    return;
+  }
+
+  const totalVistas = data.reduce((acc,n) => acc + (n.vistas || 0), 0);
+  const promedio = Math.round(totalVistas / data.length);
+  const masLeida = data[0];
+
+  stats.innerHTML = `
+    <div class="stat-card"><div class="num">${totalVistas.toLocaleString('es-AR')}</div><div class="lbl">Vistas totales</div></div>
+    <div class="stat-card"><div class="num">${promedio.toLocaleString('es-AR')}</div><div class="lbl">Promedio por nota</div></div>
+    <div class="stat-card"><div class="num" style="font-size:15px; line-height:1.3;">${masLeida.titulo}</div><div class="lbl">Nota más leída · ${(masLeida.vistas||0).toLocaleString('es-AR')} vistas</div></div>
+  `;
+
+  cont.innerHTML = data.map((n, i) => {
+    const rankClass = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
+    return `
+    <div class="fila-nota">
+      <div class="rank-num ${rankClass}">${i+1}</div>
+      <div class="miniatura" style="${n.imagen_url ? `background-image:url('${n.imagen_url}'); background-size:cover;` : ''}"></div>
+      <div class="info">
+        <div class="titulo">${n.titulo}</div>
+        <div class="meta">${n.categoria} · por ${n.autor_nombre || ''} · publicada ${tiempoDesde(n.publicada_at || n.created_at)}</div>
+      </div>
+      <div class="badge-vistas">👁️ ${(n.vistas || 0).toLocaleString('es-AR')}</div>
+    </div>
+  `;
+  }).join('');
 }
 
 async function cargarUsuarios(){
