@@ -522,27 +522,33 @@ async function handleApi(request, env, url) {
 
   // ---------- LOGIN ----------
   if (pathname === '/api/login' && metodo === 'POST') {
-    const { email, password_hash } = await request.json().catch(() => ({}));
-    if (!email || !password_hash) return jsonResponse({ error: 'Completá email y contraseña.' }, 400);
+    const { email, password } = await request.json().catch(() => ({}));
+    if (!email || !password) return jsonResponse({ error: 'Completá email y contraseña.' }, 400);
 
-    const res = await sbService(env, `usuarios?email=eq.${encodeURIComponent(email.toLowerCase())}&password_hash=eq.${encodeURIComponent(password_hash)}&activo=eq.true&select=*`);
-    const filas = await res.json();
+    // 1) Validar email+contraseña contra Supabase Auth (usa la key pública, no la service key)
+    const authRes = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.toLowerCase(), password })
+    });
+    if (!authRes.ok) return jsonResponse({ error: 'Email o contraseña incorrectos.' }, 401);
+    const authData = await authRes.json();
+    const accessToken = authData.access_token;
+    const authUser = authData.user;
+    if (!accessToken || !authUser) return jsonResponse({ error: 'Email o contraseña incorrectos.' }, 401);
 
-    // --- DIAGNÓSTICO TEMPORAL: sacar este bloque una vez resuelto el login ---
-    if (!Array.isArray(filas)) {
-      return jsonResponse({
-        error: 'DIAGNÓSTICO: Supabase no devolvió una lista de usuarios (probable problema con la key).',
-        supabase_status: res.status,
-        supabase_respuesta: filas
-      }, 500);
+    // 2) Traer el perfil (nombre, rol, activo) — con el token del propio usuario, respeta RLS
+    const perfilRes = await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${authUser.id}&select=*`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` }
+    });
+    const perfiles = await perfilRes.json().catch(() => []);
+    const perfil = Array.isArray(perfiles) ? perfiles[0] : null;
+    if (!perfil || perfil.activo === false) {
+      return jsonResponse({ error: 'Tu cuenta todavía no tiene perfil asignado. Avisá a un administrador.' }, 403);
     }
-    // --- fin diagnóstico ---
 
-    const usuario = filas[0];
-    if (!usuario) return jsonResponse({ error: 'Email o contraseña incorrectos.' }, 401);
-
-    const token = await crearToken(env, { id: usuario.id, rol: usuario.rol, nombre: usuario.nombre, email: usuario.email });
-    delete usuario.password_hash;
+    const usuario = { id: authUser.id, email: authUser.email, nombre: perfil.nombre, rol: perfil.rol };
+    const token = await crearToken(env, usuario);
     return jsonResponse({ token, user: usuario });
   }
 
