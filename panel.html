@@ -240,6 +240,26 @@ button, input, select, textarea{ font-family:inherit; }
     </div>
     <div class="campo" id="login-error" style="color:#C4382E; font-size:13px; display:none;"></div>
     <button class="btn-primario" onclick="entrar()">Ingresar</button>
+    <p style="text-align:center; margin-top:14px;">
+      <a href="#" onclick="pedirRecuperacion(); return false;" style="font-size:13px; color:#5850EC; text-decoration:underline;">¿Olvidaste tu contraseña?</a>
+    </p>
+  </div>
+
+  <!-- pantalla para poner una contraseña nueva, aparece sola si venís de un link de recuperación -->
+  <div class="login-box" id="caja-nueva-clave" style="display:none;">
+    <h1>Nueva contraseña</h1>
+    <p>Elegí una contraseña nueva para tu cuenta.</p>
+    <div class="campo">
+      <label>Contraseña nueva</label>
+      <input type="password" id="nueva-clave-1" placeholder="••••••••" autocomplete="new-password">
+    </div>
+    <div class="campo">
+      <label>Repetir contraseña</label>
+      <input type="password" id="nueva-clave-2" placeholder="••••••••" autocomplete="new-password">
+    </div>
+    <div class="campo" id="nueva-clave-error" style="color:#C4382E; font-size:13px; display:none;"></div>
+    <div class="campo" id="nueva-clave-ok" style="color:#1a7f37; font-size:13px; display:none;"></div>
+    <button class="btn-primario" onclick="guardarNuevaClave()">Guardar contraseña</button>
   </div>
 </div>
 
@@ -581,6 +601,91 @@ async function entrar(){
   localStorage.setItem('co_digital_sesion', JSON.stringify(sesion));
   mostrarPanel(sesion);
 }
+
+async function pedirRecuperacion(){
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  if(!email){
+    alert('Escribí tu email en el campo de arriba primero, y volvé a tocar "¿Olvidaste tu contraseña?".');
+    return;
+  }
+  try{
+    await fetch('/api/recuperar-clave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+  }catch(e){ /* seguimos igual, no delatamos si falló */ }
+  alert('Si ese email tiene una cuenta, te llegó un correo con un link para poner una contraseña nueva. Revisá también la carpeta de spam.');
+}
+
+async function guardarNuevaClave(){
+  const p1 = document.getElementById('nueva-clave-1').value;
+  const p2 = document.getElementById('nueva-clave-2').value;
+  const errBox = document.getElementById('nueva-clave-error');
+  const okBox = document.getElementById('nueva-clave-ok');
+  errBox.style.display = 'none';
+  okBox.style.display = 'none';
+
+  if(!p1 || p1.length < 8){
+    errBox.textContent = 'La contraseña tiene que tener al menos 8 caracteres.';
+    errBox.style.display = 'block';
+    return;
+  }
+  if(p1 !== p2){
+    errBox.textContent = 'Las dos contraseñas no coinciden.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  const accessToken = window.__recoveryAccessToken;
+  if(!accessToken){
+    errBox.textContent = 'El link venció o no es válido. Pedí uno nuevo desde la pantalla de ingreso.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  let resp, resultado;
+  try{
+    resp = await fetch('/api/actualizar-clave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ access_token: accessToken, password: p1 })
+    });
+    resultado = await resp.json();
+  }catch(e){
+    errBox.textContent = 'No se pudo conectar con el servidor.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  if(!resp.ok){
+    errBox.textContent = resultado.error || 'No se pudo cambiar la contraseña.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  okBox.textContent = 'Contraseña actualizada. Ya podés ingresar con la nueva.';
+  okBox.style.display = 'block';
+  window.__recoveryAccessToken = null;
+  history.replaceState(null, '', window.location.pathname);
+  setTimeout(() => {
+    document.getElementById('caja-nueva-clave').style.display = 'none';
+    document.querySelector('#pantalla-login .login-box').style.display = 'block';
+  }, 1800);
+}
+
+// si venís de un link de "olvidé mi contraseña" de Supabase, la URL trae
+// #access_token=...&type=recovery en el hash; lo detectamos al cargar
+(function detectarLinkRecuperacion(){
+  const hash = window.location.hash;
+  if(!hash || !hash.includes('type=recovery')) return;
+  const params = new URLSearchParams(hash.substring(1));
+  const accessToken = params.get('access_token');
+  if(!accessToken) return;
+  window.__recoveryAccessToken = accessToken;
+  document.querySelector('#pantalla-login .login-box').style.display = 'none';
+  document.getElementById('caja-nueva-clave').style.display = 'block';
+})();
 
 function mostrarPanel(sesion){
   tokenActual = sesion.token;

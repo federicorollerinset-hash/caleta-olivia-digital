@@ -552,6 +552,43 @@ async function handleApi(request, env, url) {
     return jsonResponse({ token, user: usuario });
   }
 
+  // ---------- OLVIDÉ MI CONTRASEÑA: pide a Supabase que mande el mail ----------
+  if (pathname === '/api/recuperar-clave' && metodo === 'POST') {
+    const { email } = await request.json().catch(() => ({}));
+    if (email) {
+      // el link vuelve acá mismo (panel.html), con #access_token=...&type=recovery en el hash
+      const redirectTo = `${url.origin}/panel.html`;
+      await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.toLowerCase(), options: { redirect_to: redirectTo } })
+      }).catch(() => {});
+    }
+    // siempre respondemos igual, exista o no el email, para no filtrar qué mails están registrados
+    return jsonResponse({ ok: true });
+  }
+
+  // ---------- CONFIRMAR NUEVA CONTRASEÑA (viene del link del mail) ----------
+  if (pathname === '/api/actualizar-clave' && metodo === 'POST') {
+    const { access_token, password } = await request.json().catch(() => ({}));
+    if (!access_token || !password || password.length < 8) {
+      return jsonResponse({ error: 'Faltan datos o la contraseña es muy corta.' }, 400);
+    }
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      method: 'PUT',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ password })
+    });
+    if (!res.ok) {
+      return jsonResponse({ error: 'El link venció o no es válido. Pedí uno nuevo.' }, 400);
+    }
+    return jsonResponse({ ok: true });
+  }
+
   // ---------- SUBIR IMAGEN (requiere sesión) ----------
   if (pathname === '/api/subir-imagen' && metodo === 'POST') {
     const sesion = await requireSesion(request, env);
