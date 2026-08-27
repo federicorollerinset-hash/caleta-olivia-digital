@@ -538,6 +538,13 @@ async function sha256(texto){
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
+// --- token de sesión (lo emite el worker en /api/login) y helper para llamadas autenticadas ---
+let tokenActual = null;
+function authFetch(path, options = {}){
+  const headers = { ...(options.headers || {}), 'Authorization': 'Bearer ' + tokenActual };
+  return fetch(path, { ...options, headers });
+}
+
 async function entrar(){
   const email = document.getElementById('login-email').value.trim().toLowerCase();
   const pass = document.getElementById('login-pass').value;
@@ -551,28 +558,37 @@ async function entrar(){
   }
 
   const hash = await sha256(pass);
-  const { data, error } = await sb.from('usuarios')
-    .select('*')
-    .eq('email', email)
-    .eq('password_hash', hash)
-    .eq('activo', true)
-    .maybeSingle();
-
-  if(error || !data){
-    errBox.textContent = 'Email o contraseña incorrectos.';
+  let resp, resultado;
+  try{
+    resp = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password_hash: hash })
+    });
+    resultado = await resp.json();
+  }catch(e){
+    errBox.textContent = 'No se pudo conectar con el servidor.';
     errBox.style.display = 'block';
     return;
   }
 
-  localStorage.setItem('co_digital_sesion', JSON.stringify(data));
-  mostrarPanel(data);
+  if(!resp.ok){
+    errBox.textContent = resultado.error || 'Email o contraseña incorrectos.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  const sesion = { token: resultado.token, usuario: resultado.user };
+  localStorage.setItem('co_digital_sesion', JSON.stringify(sesion));
+  mostrarPanel(sesion);
 }
 
-function mostrarPanel(data){
-  usuarioActual = data;
+function mostrarPanel(sesion){
+  tokenActual = sesion.token;
+  usuarioActual = sesion.usuario;
   document.getElementById('pantalla-login').style.display = 'none';
   document.getElementById('pantalla-panel').style.display = 'block';
-  document.getElementById('nombre-usuario').textContent = data.nombre;
+  document.getElementById('nombre-usuario').textContent = usuarioActual.nombre;
 
   const badge = document.getElementById('rol-badge');
   const navUsuarios = document.getElementById('nav-usuarios');
@@ -580,11 +596,11 @@ function mostrarPanel(data){
   const separador = document.getElementById('separador-admin');
 
   badge.classList.remove('rol-admin','rol-editor','rol-redactor');
-  if(data.rol === 'admin'){
+  if(usuarioActual.rol === 'admin'){
     badge.textContent = 'Admin'; badge.classList.add('rol-admin');
     navUsuarios.style.display = 'flex'; separador.style.display = 'block';
     navEstadisticas.style.display = 'flex';
-  } else if(data.rol === 'editor'){
+  } else if(usuarioActual.rol === 'editor'){
     badge.textContent = 'Editor'; badge.classList.add('rol-editor');
     navUsuarios.style.display = 'none'; separador.style.display = 'none';
     navEstadisticas.style.display = 'flex';
@@ -596,12 +612,13 @@ function mostrarPanel(data){
 
   cargarMisNotas();
   cargarPublicadas();
-  if(data.rol === 'admin') cargarUsuarios();
-  if(data.rol === 'admin' || data.rol === 'editor') cargarEstadisticas();
+  if(usuarioActual.rol === 'admin') cargarUsuarios();
+  if(usuarioActual.rol === 'admin' || usuarioActual.rol === 'editor') cargarEstadisticas();
 }
 
 function salir(){
   usuarioActual = null;
+  tokenActual = null;
   localStorage.removeItem('co_digital_sesion');
   document.getElementById('pantalla-panel').style.display = 'none';
   document.getElementById('pantalla-login').style.display = 'flex';
@@ -613,7 +630,11 @@ function salir(){
 (function autoLogin(){
   const guardado = localStorage.getItem('co_digital_sesion');
   if(guardado){
-    try{ mostrarPanel(JSON.parse(guardado)); }
+    try{
+      const sesion = JSON.parse(guardado);
+      if(sesion && sesion.token && sesion.usuario) mostrarPanel(sesion);
+      else localStorage.removeItem('co_digital_sesion');
+    }
     catch(e){ localStorage.removeItem('co_digital_sesion'); }
   }
 })();
@@ -629,21 +650,14 @@ document.querySelectorAll('.panel-nav a').forEach(link => {
 
 
 // --- subir imagen a Cloudflare R2 (vía Worker) y devolver la URL pública ---
+// el worker ya la registra en el banco de imágenes del lado del servidor
 async function subirImagen(archivo){
   if(!archivo) return null;
   const formData = new FormData();
   formData.append('file', archivo);
-  const resp = await fetch('/api/subir-imagen', { method:'POST', body: formData });
+  const resp = await authFetch('/api/subir-imagen', { method:'POST', body: formData });
   if(!resp.ok) throw new Error('No se pudo subir la imagen');
   const data = await resp.json();
-
-  // la registramos en el banco de imágenes para poder reutilizarla después
-  sb.from('imagenes').insert({
-    url: data.url,
-    nombre_archivo: archivo.name,
-    subida_por: usuarioActual ? usuarioActual.nombre : null
-  }).then(() => {});
-
   return data.url;
 }
 
@@ -660,7 +674,8 @@ async function toggleGaleria(){
 async function cargarGaleria(){
   const grid = document.getElementById('galeria-grid');
   grid.innerHTML = '<div style="grid-column:1/-1; font-size:12px; color:var(--ink-soft);">Cargando...</div>';
-  const { data, error } = await sb.from('imagenes').select('*').order('created_at', {ascending:false}).limit(40);
+  const resp = await authFetch('/api/imagenes');
+  const { data, error } = resp.ok ? { data: (await resp.json()).data, error: null } : { data: null, error: true };
   if(error || !data || data.length === 0){
     grid.innerHTML = '<div style="grid-column:1/-1; font-size:12px; color:var(--ink-soft);">Todavía no hay imágenes subidas.</div>';
     return;
@@ -682,12 +697,8 @@ function elegirImagenGaleria(url){
 // --- cargar nota (borrador o pendiente) ---
 let editandoId = null; // null = creando nota nueva; si tiene valor, estamos editando esa nota
 
-async function liberarPosicion(posicion, idAExcluir){
-  if(posicion === 'regular') return;
-  let query = sb.from('notas').update({ posicion: 'regular' }).eq('posicion', posicion).eq('estado','publicada');
-  if(idAExcluir) query = query.neq('id', idAExcluir);
-  await query;
-}
+// nota: liberar la posición destacada ahora lo resuelve el worker del lado del
+// servidor (junto con crear/editar la nota), no hace falta pedirlo aparte.
 
 async function guardarNota(estadoDestino){
   const titulo = document.getElementById('f-titulo').value.trim();
@@ -721,11 +732,8 @@ async function guardarNota(estadoDestino){
 
   const etiquetas = etiquetasRaw ? etiquetasRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
 
-  // si esta nota va a ocupar un lugar destacado, la que estaba ahí pasa a "regular"
-  if(estadoDestino === 'publicada'){
-    await liberarPosicion(posicion, editandoId);
-  }
-
+  // nota: liberar el lugar destacado y completar publicada_at ahora lo
+  // resuelve el worker del lado del servidor.
   const datos = {
     titulo, bajada, categoria, cuerpo, etiquetas,
     estado: estadoDestino,
@@ -736,22 +744,17 @@ async function guardarNota(estadoDestino){
   if(imagen_url) datos.imagen_url = imagen_url;
   if(estadoDestino === 'publicada' && (!editandoId)) datos.publicada_at = new Date().toISOString();
 
-  let error;
+  let resp;
   if(editandoId){
-    if(estadoDestino === 'publicada'){
-      // si la nota editada no tenía fecha de publicación (venía de borrador), se la ponemos
-      const { data: actual } = await sb.from('notas').select('publicada_at').eq('id', editandoId).maybeSingle();
-      if(actual && !actual.publicada_at) datos.publicada_at = new Date().toISOString();
-    }
-    ({ error } = await sb.from('notas').update(datos).eq('id', editandoId));
+    resp = await authFetch('/api/notas/' + editandoId, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(datos) });
   } else {
-    datos.autor_id = usuarioActual.id;
-    ({ error } = await sb.from('notas').insert(datos));
+    resp = await authFetch('/api/notas', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(datos) });
   }
+  const resultado = await resp.json().catch(() => ({}));
 
-  if(error){
+  if(!resp.ok){
     msg.style.color = '#C4382E';
-    msg.textContent = 'Error al guardar: ' + error.message;
+    msg.textContent = 'Error al guardar: ' + (resultado.error || resp.statusText);
     return;
   }
 
@@ -781,8 +784,10 @@ function cancelarEdicion(){
 }
 
 async function editarNota(id){
-  const { data: n, error } = await sb.from('notas').select('*').eq('id', id).maybeSingle();
-  if(error || !n){ alert('No se pudo cargar la nota.'); return; }
+  const resp = await authFetch('/api/notas/' + id);
+  const resultado = await resp.json().catch(() => ({}));
+  if(!resp.ok || !resultado.data){ alert('No se pudo cargar la nota.'); return; }
+  const n = resultado.data;
 
   editandoId = id;
   document.getElementById('titulo-form-cargar').textContent = 'Editando nota';
@@ -806,10 +811,10 @@ async function editarNota(id){
 
 async function borrarNota(id, titulo){
   if(!confirm(`¿Borrar la nota "${titulo}"? Esta acción no se puede deshacer.`)) return;
-  const { data, error } = await sb.from('notas').delete().eq('id', id).select();
-  if(error){ alert('Error al borrar: ' + error.message); return; }
-  if(!data || data.length === 0){
-    alert('No se pudo borrar la nota. Probablemente falta el permiso de borrado (política DELETE) en la tabla "notas" de Supabase — Supabase no tira error, simplemente no borra nada.');
+  const resp = await authFetch('/api/notas/' + id, { method:'DELETE' });
+  if(!resp.ok){
+    const resultado = await resp.json().catch(() => ({}));
+    alert('Error al borrar: ' + (resultado.error || resp.statusText));
     return;
   }
   cargarMisNotas();
@@ -817,9 +822,12 @@ async function borrarNota(id, titulo){
 }
 
 async function cambiarPosicion(id, nuevaPosicion){
-  await liberarPosicion(nuevaPosicion, id);
-  const { error } = await sb.from('notas').update({ posicion: nuevaPosicion }).eq('id', id);
-  if(error){ alert('Error: ' + error.message); return; }
+  const resp = await authFetch('/api/notas/' + id, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ posicion: nuevaPosicion }) });
+  if(!resp.ok){
+    const resultado = await resp.json().catch(() => ({}));
+    alert('Error: ' + (resultado.error || resp.statusText));
+    return;
+  }
   cargarPublicadas();
 }
 
@@ -849,7 +857,8 @@ const NOMBRES_POSICION = { principal:'Principal', secundaria1:'Destacada 2', sec
 
 async function cargarMisNotas(){
   const cont = document.getElementById('lista-mis-notas');
-  const { data, error } = await sb.from('notas').select('*').eq('autor_id', usuarioActual.id).order('created_at', {ascending:false});
+  const resp = await authFetch('/api/mis-notas');
+  const { data, error } = resp.ok ? { data: (await resp.json()).data, error: null } : { data: null, error: true };
   if(error || !data || data.length === 0){ cont.innerHTML = '<div style="padding:20px; color:var(--ink-soft); font-size:13px;">Todavía no cargaste notas.</div>'; return; }
   cont.innerHTML = data.map(n => `
     <div class="fila-nota">
@@ -934,7 +943,8 @@ async function cargarEstadisticas(){
 async function cargarUsuarios(){
   const cont = document.getElementById('lista-usuarios');
   const stats = document.getElementById('stats-usuarios');
-  const { data, error } = await sb.from('usuarios').select('*').order('created_at');
+  const resp = await authFetch('/api/usuarios');
+  const { data, error } = resp.ok ? { data: (await resp.json()).data, error: null } : { data: null, error: true };
   if(error || !data){ cont.innerHTML = '<div style="padding:20px;">Error al cargar usuarios.</div>'; return; }
 
   const conteo = { admin:0, editor:0, redactor:0 };
@@ -970,12 +980,17 @@ async function crearUsuario(){
   }
 
   const password_hash = await sha256(pass);
-  const { error } = await sb.from('usuarios').insert({ nombre, email, password_hash, rol });
+  const resp = await authFetch('/api/usuarios', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nombre, email, password_hash, rol })
+  });
+  const resultado = await resp.json().catch(() => ({}));
 
   msg.style.display = 'block';
-  if(error){
+  if(!resp.ok){
     msg.style.color = '#C4382E';
-    msg.textContent = error.message.includes('duplicate') ? 'Ya existe un usuario con ese email.' : ('Error: ' + error.message);
+    msg.textContent = resultado.error || 'No se pudo crear el usuario.';
     return;
   }
 
