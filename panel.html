@@ -557,13 +557,12 @@ async function entrar(){
     return;
   }
 
-  const hash = await sha256(pass);
   let resp, resultado;
   try{
     resp = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password_hash: hash })
+      body: JSON.stringify({ email, password: pass })
     });
     resultado = await resp.json();
   }catch(e){
