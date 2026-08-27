@@ -527,6 +527,17 @@ async function handleApi(request, env, url) {
 
     const res = await sbService(env, `usuarios?email=eq.${encodeURIComponent(email.toLowerCase())}&password_hash=eq.${encodeURIComponent(password_hash)}&activo=eq.true&select=*`);
     const filas = await res.json();
+
+    // --- DIAGNÓSTICO TEMPORAL: sacar este bloque una vez resuelto el login ---
+    if (!Array.isArray(filas)) {
+      return jsonResponse({
+        error: 'DIAGNÓSTICO: Supabase no devolvió una lista de usuarios (probable problema con la key).',
+        supabase_status: res.status,
+        supabase_respuesta: filas
+      }, 500);
+    }
+    // --- fin diagnóstico ---
+
     const usuario = filas[0];
     if (!usuario) return jsonResponse({ error: 'Email o contraseña incorrectos.' }, 401);
 
