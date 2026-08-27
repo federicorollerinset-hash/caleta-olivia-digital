@@ -6,6 +6,13 @@
 // servidor y las muestra con la identidad visual del sitio, y
 // los meta tags de Open Graph dinámicos para /nota.html (para
 // que Facebook, WhatsApp, etc. muestren título/imagen reales).
+//
+// SEGURIDAD: todas las escrituras (login, notas, usuarios,
+// imágenes) pasan por acá y usan la SERVICE ROLE key de Supabase,
+// que nunca llega al navegador. El navegador solo tiene la key
+// pública (anon), que en Supabase quedó restringida a lectura de
+// notas publicadas — ver el bloque de políticas RLS al final de
+// este archivo (comentario) para aplicarlas en el SQL editor.
 // ============================================================
 
 const SOURCES = [
@@ -344,10 +351,12 @@ setInterval(loadAll, AUTO_REFRESH_MS);
 // leen el HTML crudo. Como nota.html arma el título/imagen con
 // JS del lado del cliente, hay que inyectar los meta tags acá,
 // en el servidor, antes de devolver la página.
+// Esto usa el anon key porque solo LEE notas publicadas, algo
+// que sigue siendo público a propósito.
 // ============================================================
 
 const SUPABASE_URL = 'https://rmbutukkldktjknvhizj.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_HJbQIiqaB6MGWnfTq0GlHw_dDO7tbAe';
+const SUPABASE_ANON_KEY = 'sb_publishable_HJbQIiqaB6MGWnfTq0GlHw_dDO7tbAe';
 
 function escapeAttr(str) {
   return (str || '')
@@ -358,11 +367,11 @@ function escapeAttr(str) {
 }
 
 async function obtenerNotaParaOg(id) {
-  const url = `${SUPABASE_URL}/rest/v1/notas?id=eq.${encodeURIComponent(id)}&estado=eq.publicada&select=titulo,bajada,imagen_url&limit=1`;
+  const url = `${SUPABASE_URL}/rest/v1/notas?id=eq.${encodeURIComponent(id)}&estado=eq.publicada&select=titulo,bajada,imagen_url`;
   const res = await fetch(url, {
     headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`
     }
   });
   if (!res.ok) return null;
@@ -421,36 +430,269 @@ async function handleNotaHtml(request, env, url) {
   });
 }
 
+// ============================================================
+// AUTENTICACIÓN Y ESCRITURAS PROTEGIDAS
+// A partir de acá: login, sesiones firmadas, y todos los
+// endpoints que crean/editan/borran datos. Todos usan
+// env.SUPABASE_SERVICE_KEY (secreto de Cloudflare, nunca en el
+// código ni en el navegador) para hablar con Supabase saltando
+// RLS del lado del servidor, después de validar el permiso acá.
+// ============================================================
+
+function jsonResponse(obj, status = 200) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*' }
+  });
+}
+
+function toBase64Url(bytes) {
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function fromBase64Url(str) {
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (str.length % 4) str += '=';
+  const bin = atob(str);
+  return new Uint8Array([...bin].map(c => c.charCodeAt(0)));
+}
+
+async function hmacFirmar(secreto, texto) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secreto), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(texto));
+  return toBase64Url(new Uint8Array(sig));
+}
+
+// token de sesión: <payload en base64url>.<firma hmac>, vence a los 7 días
+async function crearToken(env, payload) {
+  const cuerpo = { ...payload, exp: Date.now() + 1000 * 60 * 60 * 24 * 7 };
+  const payloadB64 = toBase64Url(new TextEncoder().encode(JSON.stringify(cuerpo)));
+  const firma = await hmacFirmar(env.SESSION_SECRET, payloadB64);
+  return `${payloadB64}.${firma}`;
+}
+
+async function verificarToken(env, token) {
+  if (!token) return null;
+  const partes = token.split('.');
+  if (partes.length !== 2) return null;
+  const [payloadB64, firma] = partes;
+  const firmaEsperada = await hmacFirmar(env.SESSION_SECRET, payloadB64);
+  if (firma !== firmaEsperada) return null;
+  let payload;
+  try { payload = JSON.parse(new TextDecoder().decode(fromBase64Url(payloadB64))); }
+  catch (e) { return null; }
+  if (!payload.exp || payload.exp < Date.now()) return null;
+  return payload;
+}
+
+function getBearerToken(request) {
+  const h = request.headers.get('Authorization') || '';
+  const m = h.match(/^Bearer (.+)$/);
+  return m ? m[1] : null;
+}
+
+async function requireSesion(request, env) {
+  return verificarToken(env, getBearerToken(request));
+}
+
+// Habla con Supabase usando la service role key (bypassa RLS) — solo se llama server-side
+async function sbService(env, path, options = {}) {
+  const headers = {
+    apikey: env.SUPABASE_SERVICE_KEY,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+    'Content-Type': 'application/json',
+    Prefer: options.prefer || 'return=representation',
+    ...(options.headers || {})
+  };
+  return fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...options, headers });
+}
+
+// si esta nota va a ocupar un lugar destacado, la que estaba ahí pasa a "regular" (server-side)
+async function liberarPosicionServer(env, posicion, idAExcluir) {
+  if (posicion === 'regular') return;
+  let path = `notas?posicion=eq.${posicion}&estado=eq.publicada`;
+  if (idAExcluir) path += `&id=neq.${idAExcluir}`;
+  await sbService(env, path, { method: 'PATCH', body: JSON.stringify({ posicion: 'regular' }), prefer: 'return=minimal' });
+}
+
+async function handleApi(request, env, url) {
+  const { pathname } = url;
+  const metodo = request.method;
+
+  // ---------- LOGIN ----------
+  if (pathname === '/api/login' && metodo === 'POST') {
+    const { email, password_hash } = await request.json().catch(() => ({}));
+    if (!email || !password_hash) return jsonResponse({ error: 'Completá email y contraseña.' }, 400);
+
+    const res = await sbService(env, `usuarios?email=eq.${encodeURIComponent(email.toLowerCase())}&password_hash=eq.${encodeURIComponent(password_hash)}&activo=eq.true&select=*`);
+    const filas = await res.json();
+    const usuario = filas[0];
+    if (!usuario) return jsonResponse({ error: 'Email o contraseña incorrectos.' }, 401);
+
+    const token = await crearToken(env, { id: usuario.id, rol: usuario.rol, nombre: usuario.nombre, email: usuario.email });
+    delete usuario.password_hash;
+    return jsonResponse({ token, user: usuario });
+  }
+
+  // ---------- SUBIR IMAGEN (requiere sesión) ----------
+  if (pathname === '/api/subir-imagen' && metodo === 'POST') {
+    const sesion = await requireSesion(request, env);
+    if (!sesion) return jsonResponse({ error: 'No autorizado.' }, 401);
+    try {
+      const formData = await request.formData();
+      const file = formData.get('file');
+      if (!file) return jsonResponse({ error: 'No se envió ningún archivo' }, 400);
+
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const nombreArchivo = `notas/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+      await env.IMAGENES.put(nombreArchivo, file.stream(), { httpMetadata: { contentType: file.type || 'image/jpeg' } });
+      const urlPublica = `https://pub-2f0378f77190435e86bc93accabc379c.r2.dev/${nombreArchivo}`;
+
+      // registrar en el banco de imágenes reutilizables
+      await sbService(env, 'imagenes', {
+        method: 'POST',
+        prefer: 'return=minimal',
+        body: JSON.stringify({ url: urlPublica, nombre_archivo: file.name, subida_por: sesion.nombre })
+      });
+
+      return jsonResponse({ url: urlPublica });
+    } catch (err) {
+      return jsonResponse({ error: 'Error al subir la imagen: ' + err.message }, 500);
+    }
+  }
+
+  // ---------- GALERÍA DE IMÁGENES (requiere sesión) ----------
+  if (pathname === '/api/imagenes' && metodo === 'GET') {
+    const sesion = await requireSesion(request, env);
+    if (!sesion) return jsonResponse({ error: 'No autorizado.' }, 401);
+    const res = await sbService(env, 'imagenes?select=*&order=created_at.desc&limit=40');
+    return jsonResponse({ data: await res.json() });
+  }
+
+  // ---------- MIS NOTAS (propias, incluye borradores) ----------
+  if (pathname === '/api/mis-notas' && metodo === 'GET') {
+    const sesion = await requireSesion(request, env);
+    if (!sesion) return jsonResponse({ error: 'No autorizado.' }, 401);
+    const res = await sbService(env, `notas?autor_id=eq.${sesion.id}&select=*&order=created_at.desc`);
+    return jsonResponse({ data: await res.json() });
+  }
+
+  // ---------- UNA NOTA PUNTUAL (para editar) ----------
+  if (pathname.startsWith('/api/notas/') && metodo === 'GET') {
+    const sesion = await requireSesion(request, env);
+    if (!sesion) return jsonResponse({ error: 'No autorizado.' }, 401);
+    const id = pathname.split('/').pop();
+    const res = await sbService(env, `notas?id=eq.${id}&select=*`);
+    const filas = await res.json();
+    if (!filas[0]) return jsonResponse({ error: 'No encontrada.' }, 404);
+    if (sesion.rol === 'redactor' && filas[0].autor_id !== sesion.id) return jsonResponse({ error: 'No podés editar esta nota.' }, 403);
+    return jsonResponse({ data: filas[0] });
+  }
+
+  // ---------- CREAR NOTA ----------
+  if (pathname === '/api/notas' && metodo === 'POST') {
+    const sesion = await requireSesion(request, env);
+    if (!sesion) return jsonResponse({ error: 'No autorizado.' }, 401);
+    const datos = await request.json().catch(() => null);
+    if (!datos) return jsonResponse({ error: 'Datos inválidos.' }, 400);
+
+    if (datos.estado === 'publicada' && datos.posicion && datos.posicion !== 'regular') {
+      await liberarPosicionServer(env, datos.posicion, null);
+    }
+    datos.autor_id = sesion.id;
+
+    const res = await sbService(env, 'notas', { method: 'POST', body: JSON.stringify(datos) });
+    if (!res.ok) return jsonResponse({ error: 'No se pudo crear la nota.' }, 500);
+    const filas = await res.json();
+    return jsonResponse({ data: filas[0] });
+  }
+
+  // ---------- EDITAR / BORRAR NOTA ----------
+  if (pathname.startsWith('/api/notas/') && (metodo === 'PUT' || metodo === 'DELETE')) {
+    const sesion = await requireSesion(request, env);
+    if (!sesion) return jsonResponse({ error: 'No autorizado.' }, 401);
+    const id = pathname.split('/').pop();
+
+    // se busca la nota actual una sola vez: sirve para chequear permiso de
+    // redactor y, si corresponde, completar la fecha de publicación
+    const actualRes = await sbService(env, `notas?id=eq.${id}&select=autor_id,publicada_at`);
+    const actualFilas = await actualRes.json();
+    if (!actualFilas[0]) return jsonResponse({ error: 'No se encontró la nota.' }, 404);
+    if (sesion.rol === 'redactor' && actualFilas[0].autor_id !== sesion.id) {
+      return jsonResponse({ error: 'No tenés permiso sobre esta nota.' }, 403);
+    }
+
+    if (metodo === 'DELETE') {
+      const res = await sbService(env, `notas?id=eq.${id}`, { method: 'DELETE' });
+      if (!res.ok) return jsonResponse({ error: 'No se pudo borrar la nota.' }, 500);
+      return jsonResponse({ ok: true });
+    }
+
+    const datos = await request.json().catch(() => null);
+    if (!datos) return jsonResponse({ error: 'Datos inválidos.' }, 400);
+    delete datos.autor_id; // nunca se cambia el autor desde el cliente
+
+    if (datos.estado === 'publicada' && !actualFilas[0].publicada_at) {
+      datos.publicada_at = new Date().toISOString();
+    }
+    if (datos.posicion && datos.posicion !== 'regular') {
+      await liberarPosicionServer(env, datos.posicion, id);
+    }
+
+    const res = await sbService(env, `notas?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(datos), prefer: 'return=minimal' });
+    if (!res.ok) return jsonResponse({ error: 'No se pudo editar la nota.' }, 500);
+    return jsonResponse({ ok: true });
+  }
+
+  // ---------- SUMAR UNA VISTA (público, sin sesión — solo suma 1) ----------
+  if (pathname.startsWith('/api/vista/') && metodo === 'POST') {
+    const id = pathname.split('/').pop();
+    const res = await sbService(env, `notas?id=eq.${id}&estado=eq.publicada&select=vistas`);
+    const filas = await res.json();
+    if (!filas[0]) return jsonResponse({ ok: false }, 404);
+    const nuevasVistas = (filas[0].vistas || 0) + 1;
+    await sbService(env, `notas?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ vistas: nuevasVistas }), prefer: 'return=minimal' });
+    return jsonResponse({ ok: true });
+  }
+
+  // ---------- USUARIOS (solo admin) ----------
+  if (pathname === '/api/usuarios' && metodo === 'GET') {
+    const sesion = await requireSesion(request, env);
+    if (!sesion || sesion.rol !== 'admin') return jsonResponse({ error: 'No autorizado.' }, 403);
+    const res = await sbService(env, 'usuarios?select=*&order=created_at');
+    const data = await res.json();
+    data.forEach(u => delete u.password_hash);
+    return jsonResponse({ data });
+  }
+
+  if (pathname === '/api/usuarios' && metodo === 'POST') {
+    const sesion = await requireSesion(request, env);
+    if (!sesion || sesion.rol !== 'admin') return jsonResponse({ error: 'No autorizado.' }, 403);
+    const datos = await request.json().catch(() => null);
+    if (!datos) return jsonResponse({ error: 'Datos inválidos.' }, 400);
+
+    const res = await sbService(env, 'usuarios', { method: 'POST', body: JSON.stringify(datos) });
+    if (!res.ok) {
+      const texto = await res.text();
+      const dup = texto.includes('duplicate');
+      return jsonResponse({ error: dup ? 'Ya existe un usuario con ese email.' : 'No se pudo crear el usuario.' }, 500);
+    }
+    const filas = await res.json();
+    if (filas[0]) delete filas[0].password_hash;
+    return jsonResponse({ data: filas[0] });
+  }
+
+  return null; // no es una ruta de /api que manejemos acá
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    if (url.pathname === '/api/subir-imagen' && request.method === 'POST') {
-      try {
-        const formData = await request.formData();
-        const file = formData.get('file');
-        if (!file) {
-          return new Response(JSON.stringify({ error: 'No se envió ningún archivo' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
-        }
-        const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-        const nombreArchivo = `notas/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-        await env.IMAGENES.put(nombreArchivo, file.stream(), {
-          httpMetadata: { contentType: file.type || 'image/jpeg' }
-        });
-        const urlPublica = `https://pub-2f0378f77190435e86bc93accabc379c.r2.dev/${nombreArchivo}`;
-        return new Response(JSON.stringify({ url: urlPublica }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      } catch (err) {
-        return new Response(JSON.stringify({ error: 'Error al subir la imagen: ' + err.message }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
+    if (url.pathname.startsWith('/api/')) {
+      const respuestaApi = await handleApi(request, env, url);
+      if (respuestaApi) return respuestaApi;
     }
 
     if (url.pathname === '/panoramasantacruz') {
@@ -468,3 +710,18 @@ export default {
     return env.ASSETS.fetch(request);
   }
 };
+
+// ============================================================
+// PENDIENTE DE CONFIGURAR EN CLOUDFLARE (una sola vez):
+//
+// npx wrangler secret put SUPABASE_SERVICE_KEY
+//   → pegar la "service_role" key de Supabase (Project Settings
+//     → API → service_role secret). NUNCA la anon/publishable.
+//
+// npx wrangler secret put SESSION_SECRET
+//   → pegar cualquier cadena larga y aleatoria (ej: generada con
+//     `openssl rand -hex 32`). Se usa para firmar las sesiones.
+//
+// Y en Supabase (SQL editor) hay que cerrar el acceso directo
+// del anon key — ver notas aparte.
+// ============================================================
