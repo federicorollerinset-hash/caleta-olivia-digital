@@ -667,6 +667,7 @@ async function handleApi(request, env, url) {
         diagnostico_key_largo: k.length,
         diagnostico_key_inicio: k.slice(0, 12),
         diagnostico_key_final: k.slice(-6),
+        diagnostico_nombres_variables: Object.keys(env),
         diagnostico_supabase: detalle
       }, 500);
     }
