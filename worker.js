@@ -500,7 +500,8 @@ async function requireSesion(request, env) {
 async function sbService(env, path, options = {}) {
   const headers = {
     apikey: env.SUPABASE_SERVICE_KEY,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+    // OJO: las keys nuevas de Supabase (sb_secret_...) NO van en Authorization,
+    // solo en apikey — si se manda también ahí, Supabase la rechaza como "Invalid API key".
     'Content-Type': 'application/json',
     Prefer: options.prefer || 'return=representation',
     ...(options.headers || {})
@@ -657,14 +658,7 @@ async function handleApi(request, env, url) {
     datos.autor_id = sesion.id;
 
     const res = await sbService(env, 'notas', { method: 'POST', body: JSON.stringify(datos) });
-    if (!res.ok) {
-      const detalle = await res.json().catch(() => null);
-      return jsonResponse({
-        error: 'No se pudo crear la nota.',
-        diagnostico_status: res.status,
-        diagnostico_supabase: detalle
-      }, 500);
-    }
+    if (!res.ok) return jsonResponse({ error: 'No se pudo crear la nota.' }, 500);
     const filas = await res.json();
     return jsonResponse({ data: filas[0] });
   }
