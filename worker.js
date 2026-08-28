@@ -657,7 +657,14 @@ async function handleApi(request, env, url) {
     datos.autor_id = sesion.id;
 
     const res = await sbService(env, 'notas', { method: 'POST', body: JSON.stringify(datos) });
-    if (!res.ok) return jsonResponse({ error: 'No se pudo crear la nota.' }, 500);
+    if (!res.ok) {
+      const detalle = await res.json().catch(() => null);
+      return jsonResponse({
+        error: 'No se pudo crear la nota.',
+        diagnostico_status: res.status,
+        diagnostico_supabase: detalle
+      }, 500);
+    }
     const filas = await res.json();
     return jsonResponse({ data: filas[0] });
   }
