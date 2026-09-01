@@ -496,7 +496,7 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
     cargarRelacionadas(n.categoria, n.id);
 
     // suma una vista (no bloquea la carga de la página, se dispara en segundo plano)
-    sb.from('notas').update({ vistas: (n.vistas || 0) + 1 }).eq('id', n.id).then(() => {});
+    if (!localStorage.getItem('co_digital_sesion')) { sb.from('notas').update({ vistas: (n.vistas || 0) + 1 }).eq('id', n.id).then(() => {}); }
 
     cargarMasLeidas();
   }
