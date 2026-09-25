@@ -658,19 +658,7 @@ async function handleApi(request, env, url) {
     datos.autor_id = sesion.id;
 
     const res = await sbService(env, 'notas', { method: 'POST', body: JSON.stringify(datos) });
-    if (!res.ok) {
-      const detalle = await res.json().catch(() => null);
-      const k = env.SUPABASE_SERVICE_KEY || '';
-      return jsonResponse({
-        error: 'No se pudo crear la nota.',
-        diagnostico_status: res.status,
-        diagnostico_key_largo: k.length,
-        diagnostico_key_inicio: k.slice(0, 12),
-        diagnostico_key_final: k.slice(-6),
-        diagnostico_nombres_variables: Object.keys(env),
-        diagnostico_supabase: detalle
-      }, 500);
-    }
+    if (!res.ok) return jsonResponse({ error: 'No se pudo crear la nota.' }, 500);
     const filas = await res.json();
     return jsonResponse({ data: filas[0] });
   }
