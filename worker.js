@@ -3,9 +3,9 @@
 // Sirve el diario (assets estáticos), el endpoint de subida de
 // imágenes a R2, la pestaña /panoramasantacruz (ex "Apertura"),
 // que lee las portadas de los diarios de Santa Cruz del lado del
-// servidor y las muestra con la identidad visual del sitio, y
-// los meta tags de Open Graph dinámicos para /nota.html (para
-// que Facebook, WhatsApp, etc. muestren título/imagen reales).
+// servidor y las muestra con la identidad visual del sitio, las
+// notas con URL propia (/nota/<titulo>) con sus meta tags para
+// Google/Facebook/WhatsApp, y el sitemap.xml.
 //
 // SEGURIDAD: todas las escrituras (login, notas, usuarios,
 // imágenes) pasan por acá y usan la SERVICE ROLE key de Supabase,
@@ -346,17 +346,24 @@ setInterval(loadAll, AUTO_REFRESH_MS);
 </html>`;
 
 // ============================================================
-// OG TAGS DINÁMICOS PARA /nota.html
-// Facebook (y WhatsApp, Twitter, Slack, etc) no ejecutan JS:
-// leen el HTML crudo. Como nota.html arma el título/imagen con
-// JS del lado del cliente, hay que inyectar los meta tags acá,
-// en el servidor, antes de devolver la página.
+// NOTAS CON URL PROPIA (SLUG) + SEO
+// Las notas se abren en caletaoliviadigital.com.ar/nota/<titulo-de-la-nota>
+// en vez de /nota?id=<código largo>.
+//
+// Acá se hace todo lo que tiene que ver con buscadores y redes:
+//  - /nota/<slug> sirve nota.html con título, descripción, imagen,
+//    URL canónica y datos estructurados (NewsArticle) ya puestos en
+//    el HTML, porque Google/Facebook/WhatsApp no esperan al JS.
+//  - los links viejos (/nota?id=...) redirigen (301) a la URL nueva.
+//  - /sitemap.xml se arma solo con las notas publicadas.
+//
 // Esto usa el anon key porque solo LEE notas publicadas, algo
 // que sigue siendo público a propósito.
 // ============================================================
 
 const SUPABASE_URL = 'https://rmbutukkldktjknvhizj.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_HJbQIiqaB6MGWnfTq0GlHw_dDO7tbAe';
+const SITE_NAME = 'Caleta Olivia Digital';
 
 function escapeAttr(str) {
   return (str || '')
@@ -366,67 +373,201 @@ function escapeAttr(str) {
     .replace(/>/g, '&gt;');
 }
 
-async function obtenerNotaParaOg(id) {
-  const url = `${SUPABASE_URL}/rest/v1/notas?id=eq.${encodeURIComponent(id)}&estado=eq.publicada&select=titulo,bajada,imagen_url`;
-  const res = await fetch(url, {
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`
-    }
-  });
-  if (!res.ok) return null;
-  const rows = await res.json();
-  return rows[0] || null;
+// "Intendente anunció obras en Güemes y Rivadavia" -> "intendente-anuncio-obras-en-guemes-y-rivadavia"
+function slugify(texto, max = 70) {
+  let s = (texto || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/&/g, ' y ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  if (s.length > max) {
+    s = s.slice(0, max);
+    const ult = s.lastIndexOf('-');
+    if (ult > 30) s = s.slice(0, ult); // corta en una palabra entera
+    s = s.replace(/-+$/, '');
+  }
+  return s || 'nota';
 }
 
-async function handleNotaHtml(request, env, url) {
-  const assetResponse = await env.ASSETS.fetch(request);
-  const id = url.searchParams.get('id');
-  if (!id) return assetResponse;
-
-  let nota = null;
-  try {
-    nota = await obtenerNotaParaOg(id);
-  } catch (e) {
-    return assetResponse;
+// devuelve un slug que no esté usado por otra nota (agrega -2, -3... si hace falta)
+async function generarSlugUnico(env, titulo, idExcluir) {
+  const base = slugify(titulo);
+  let candidato = base;
+  for (let i = 2; i < 50; i++) {
+    let path = `notas?slug=eq.${encodeURIComponent(candidato)}&select=id`;
+    if (idExcluir) path += `&id=neq.${idExcluir}`;
+    const res = await sbService(env, path);
+    const filas = res.ok ? await res.json() : [];
+    if (!filas.length) return candidato;
+    candidato = `${base}-${i}`;
   }
-  if (!nota) return assetResponse;
+  return `${base}-${Date.now().toString(36)}`;
+}
 
-  const html = await assetResponse.text();
+// Lee una nota publicada. Devuelve la nota, null si no existe, o false si Supabase falló.
+async function obtenerNotaPublica({ slug, id }) {
+  const filtro = slug ? `slug=eq.${encodeURIComponent(slug)}` : `id=eq.${encodeURIComponent(id)}`;
+  const campos = 'id,titulo,bajada,cuerpo,imagen_url,slug,categoria,autor_nombre,publicada_at,created_at,updated_at';
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/notas?${filtro}&estado=eq.publicada&select=${campos}&limit=1`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    if (res.status === 400) return null; // id con formato inválido
+    if (!res.ok) return false;
+    const rows = await res.json();
+    return rows[0] || null;
+  } catch (e) {
+    return false;
+  }
+}
 
-  const titulo = escapeAttr(nota.titulo || 'Caleta Olivia Digital');
-  const descripcion = escapeAttr(
-    nota.bajada || 'Noticias de Caleta Olivia y Santa Cruz.'
-  );
-  const notaUrl = escapeAttr(url.href);
+// El HTML de la página de nota, tal como está en los assets (según la config puede
+// estar como /nota o /nota.html; se prueba una y después la otra).
+async function obtenerPaginaNota(env, url) {
+  for (const ruta of ['/nota', '/nota.html']) {
+    const r = await env.ASSETS.fetch(new Request(new URL(ruta, url.origin).toString()));
+    if (r.status === 200) return r;
+  }
+  return null;
+}
 
-  let metaTags = `
+// saca los códigos [yt]...[/yt], [link]..., [b], etc. del cuerpo para armar una descripción limpia
+function textoPlanoDeCuerpo(cuerpo) {
+  return (cuerpo || '')
+    .replace(/\[(yt|fb|tw|img)\][\s\S]*?\[\/\1\]/gi, ' ')
+    .replace(/\[link\][^|\]]*\|?([\s\S]*?)\[\/link\]/gi, '$1')
+    .replace(/\[\/?(b|u|mark)\]/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function recortar(texto, max) {
+  if (texto.length <= max) return texto;
+  const corte = texto.slice(0, max);
+  return corte.slice(0, corte.lastIndexOf(' ') > 80 ? corte.lastIndexOf(' ') : max).trim() + '…';
+}
+
+function armarMetaNota(nota, url) {
+  const canonica = nota.slug
+    ? `${url.origin}/nota/${nota.slug}`
+    : `${url.origin}/nota?id=${nota.id}`;
+  const tituloPlano = nota.titulo || SITE_NAME;
+  const descripcionPlana = nota.bajada && nota.bajada.trim()
+    ? recortar(nota.bajada.trim(), 200)
+    : (recortar(textoPlanoDeCuerpo(nota.cuerpo), 160) || 'Noticias de Caleta Olivia y Santa Cruz.');
+
+  const titulo = escapeAttr(tituloPlano);
+  const descripcion = escapeAttr(descripcionPlana);
+  const urlAttr = escapeAttr(canonica);
+  const publicada = nota.publicada_at || nota.created_at;
+  const modificada = nota.updated_at || publicada;
+
+  let tags = `<title>${titulo} — ${SITE_NAME}</title>
+<meta name="description" content="${descripcion}">
+<link rel="canonical" href="${urlAttr}">
+<meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:type" content="article">
+<meta property="og:locale" content="es_AR">
 <meta property="og:title" content="${titulo}">
 <meta property="og:description" content="${descripcion}">
-<meta property="og:url" content="${notaUrl}">
-<meta property="og:site_name" content="Caleta Olivia Digital">
+<meta property="og:url" content="${urlAttr}">
+<meta property="og:site_name" content="${SITE_NAME}">
+<meta property="article:published_time" content="${escapeAttr(publicada || '')}">
+<meta property="article:modified_time" content="${escapeAttr(modificada || '')}">
+<meta property="article:section" content="${escapeAttr(nota.categoria || '')}">
 <meta name="twitter:card" content="${nota.imagen_url ? 'summary_large_image' : 'summary'}">
 <meta name="twitter:title" content="${titulo}">
 <meta name="twitter:description" content="${descripcion}">
 `;
-
   if (nota.imagen_url) {
     const imagen = escapeAttr(nota.imagen_url);
-    metaTags += `<meta property="og:image" content="${imagen}">\n<meta name="twitter:image" content="${imagen}">\n`;
+    tags += `<meta property="og:image" content="${imagen}">\n<meta name="twitter:image" content="${imagen}">\n`;
   }
 
-  const newHtml = html.replace(
-    /<title>[\s\S]*?<\/title>/,
-    `<title>${nota.titulo} — Caleta Olivia Digital</title>${metaTags}`
-  );
+  const esRedaccion = !nota.autor_nombre || /^redacci[oó]n$/i.test(nota.autor_nombre.trim());
+  const datos = {
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    headline: tituloPlano.slice(0, 110),
+    description: descripcionPlana,
+    image: nota.imagen_url ? [nota.imagen_url] : undefined,
+    datePublished: publicada || undefined,
+    dateModified: modificada || undefined,
+    articleSection: nota.categoria || undefined,
+    inLanguage: 'es-AR',
+    author: esRedaccion
+      ? { '@type': 'Organization', name: SITE_NAME }
+      : { '@type': 'Person', name: nota.autor_nombre },
+    publisher: { '@type': 'Organization', name: SITE_NAME },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': canonica }
+  };
+  tags += `<script type="application/ld+json">${JSON.stringify(datos).replace(/</g, '\\u003c')}</script>\n`;
+  return tags;
+}
 
-  const headers = new Headers(assetResponse.headers);
+async function responderPaginaNota(env, url, nota, status = 200) {
+  const pagina = await obtenerPaginaNota(env, url);
+  if (!pagina) return new Response('Página no disponible', { status: 500 });
+  let html = await pagina.text();
+
+  if (nota) {
+    html = html.replace(/<title>[\s\S]*?<\/title>/, () => armarMetaNota(nota, url));
+  } else if (status === 404) {
+    html = html.replace('</head>', '<meta name="robots" content="noindex">\n</head>');
+  }
+
+  const headers = new Headers(pagina.headers);
   headers.delete('content-length');
+  headers.set('Content-Type', 'text/html; charset=utf-8');
+  return new Response(html, { status, headers });
+}
 
-  return new Response(newHtml, {
-    status: assetResponse.status,
-    headers
+// /nota/<slug>
+async function handleNotaSlug(request, env, url, slugCrudo) {
+  let slug;
+  try { slug = decodeURIComponent(slugCrudo); } catch (e) { slug = slugCrudo; }
+  const nota = await obtenerNotaPublica({ slug });
+  if (nota === false) return responderPaginaNota(env, url, null, 200); // falló Supabase: que cargue por JS
+  if (!nota) return responderPaginaNota(env, url, null, 404);          // no existe: 404 real para buscadores
+  return responderPaginaNota(env, url, nota, 200);
+}
+
+// /nota?id=... y /nota.html?id=... (links viejos): redirigen a la URL con título
+async function handleNotaLegacy(request, env, url) {
+  const id = url.searchParams.get('id');
+  if (!id) return env.ASSETS.fetch(request);
+  const nota = await obtenerNotaPublica({ id });
+  if (nota && nota.slug) return Response.redirect(`${url.origin}/nota/${nota.slug}`, 301);
+  if (nota) return responderPaginaNota(env, url, nota, 200); // nota sin slug todavía
+  return env.ASSETS.fetch(request);
+}
+
+async function handleSitemap(env, url) {
+  let filas = [];
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/notas?estado=eq.publicada&slug=not.is.null&select=slug,publicada_at,created_at,updated_at&order=publicada_at.desc.nullslast&limit=1000`,
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+    );
+    if (res.ok) filas = await res.json();
+  } catch (e) {}
+
+  const fecha = f => (f ? `<lastmod>${new Date(f).toISOString()}</lastmod>` : '');
+  const urls = [
+    `<url><loc>${url.origin}/</loc><changefreq>hourly</changefreq><priority>1.0</priority></url>`,
+    `<url><loc>${url.origin}/panoramasantacruz</loc><changefreq>hourly</changefreq><priority>0.5</priority></url>`,
+    ...filas.map(n => `<url><loc>${url.origin}/nota/${n.slug}</loc>${fecha(n.updated_at || n.publicada_at || n.created_at)}</url>`)
+  ];
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>`;
+  return new Response(xml, {
+    headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=900' }
+  });
+}
+
+function handleRobots(url) {
+  return new Response(`User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${url.origin}/sitemap.xml\n`, {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }
   });
 }
 
@@ -656,6 +797,10 @@ async function handleApi(request, env, url) {
       await liberarPosicionServer(env, datos.posicion, null);
     }
     datos.autor_id = sesion.id;
+    delete datos.slug; // el slug nunca viene del navegador: lo genera el servidor
+    if (datos.estado === 'publicada') {
+      datos.slug = await generarSlugUnico(env, datos.titulo, null);
+    }
 
     const res = await sbService(env, 'notas', { method: 'POST', body: JSON.stringify(datos) });
     if (!res.ok) return jsonResponse({ error: 'No se pudo crear la nota.' }, 500);
@@ -671,7 +816,7 @@ async function handleApi(request, env, url) {
 
     // se busca la nota actual una sola vez: sirve para chequear permiso de
     // redactor y, si corresponde, completar la fecha de publicación
-    const actualRes = await sbService(env, `notas?id=eq.${id}&select=autor_id,publicada_at`);
+    const actualRes = await sbService(env, `notas?id=eq.${id}&select=autor_id,publicada_at,slug,titulo,estado`);
     const actualFilas = await actualRes.json();
     if (!actualFilas[0]) return jsonResponse({ error: 'No se encontró la nota.' }, 404);
     if (sesion.rol === 'redactor' && actualFilas[0].autor_id !== sesion.id) {
@@ -687,6 +832,14 @@ async function handleApi(request, env, url) {
     const datos = await request.json().catch(() => null);
     if (!datos) return jsonResponse({ error: 'Datos inválidos.' }, 400);
     delete datos.autor_id; // nunca se cambia el autor desde el cliente
+    delete datos.slug;     // el slug lo maneja el servidor
+
+    // la nota recibe su URL la primera vez que queda publicada; después NO cambia
+    // aunque se edite el título, para no romper links ya compartidos
+    const estadoFinal = datos.estado || actualFilas[0].estado;
+    if (estadoFinal === 'publicada' && !actualFilas[0].slug) {
+      datos.slug = await generarSlugUnico(env, datos.titulo || actualFilas[0].titulo, id);
+    }
 
     if (datos.estado === 'publicada' && !actualFilas[0].publicada_at) {
       datos.publicada_at = new Date().toISOString();
@@ -758,8 +911,21 @@ export default {
       return handlePanoramaApi(request, ctx);
     }
 
-    if (url.pathname === '/nota.html') {
-      return handleNotaHtml(request, env, url);
+    const mNota = url.pathname.match(/^\/nota\/([^\/]+)\/?$/);
+    if (mNota) {
+      return handleNotaSlug(request, env, url, mNota[1]);
+    }
+
+    if (url.pathname === '/nota' || url.pathname === '/nota.html') {
+      return handleNotaLegacy(request, env, url);
+    }
+
+    if (url.pathname === '/sitemap.xml') {
+      return handleSitemap(env, url);
+    }
+
+    if (url.pathname === '/robots.txt') {
+      return handleRobots(url);
     }
 
     return env.ASSETS.fetch(request);
