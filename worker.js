@@ -928,6 +928,13 @@ export default {
       return handleRobots(url);
     }
 
+    // verificación de propiedad de Google Search Console (no borrar)
+    if (url.pathname === '/google7e9d151ffbf81a5e.html') {
+      return new Response('google-site-verification: google7e9d151ffbf81a5e.html', {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' }
+      });
+    }
+
     return env.ASSETS.fetch(request);
   }
 };
