@@ -382,6 +382,119 @@ footer{
   .header-top{ flex-wrap:wrap; gap:10px; }
   .buscador{ order:3; max-width:none; flex-basis:100%; }
 }
+
+/* --- navegación por secciones --- */
+.nav-cats{
+  max-width:1180px; margin:0 auto; padding:0 24px;
+  display:flex; gap:2px; overflow-x:auto;
+  border-top:1px solid var(--line);
+  scrollbar-width:none;
+}
+.nav-cats::-webkit-scrollbar{ display:none; }
+.nav-cats button{
+  background:none; border:none; cursor:pointer; white-space:nowrap;
+  font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px;
+  color:var(--ink-soft);
+  padding:11px 14px;
+  border-bottom:2px solid transparent;
+}
+.nav-cats button:hover{ color:var(--indigo); }
+.nav-cats button.activa{ color:var(--indigo); border-bottom-color:var(--indigo); }
+.oculto{ display:none !important; }
+
+/* --- bloques por sección --- */
+.bloque{ margin-bottom:40px; min-width:0; }
+.bloque-cab{
+  display:flex; align-items:center; justify-content:space-between;
+  border-bottom:2px solid var(--indigo);
+  padding-bottom:8px; margin-bottom:16px;
+}
+.bloque-cab h2{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:19px; font-weight:700;
+  display:flex; align-items:center;
+}
+.bloque-cab a{ font-size:12px; font-weight:600; color:var(--indigo); }
+.bloque-cab a:hover{ text-decoration:underline; }
+.bloque-cuerpo{ display:grid; grid-template-columns:1.2fr 1fr; gap:22px; }
+.bloque-grande{ min-width:0; }
+.bloque-grande .img{
+  height:210px; background:#EDEBF7; border-radius:4px;
+  display:flex; align-items:center; justify-content:center;
+  color:#B7B0D6; font-size:11px; font-family:'Space Grotesk',sans-serif;
+}
+.bloque-grande h3{
+  font-family:'Source Serif 4',serif;
+  font-size:21px; line-height:1.25; margin:12px 0 8px;
+}
+.bloque-grande h3 a:hover, .fila-chica h4 a:hover{ color:var(--indigo); }
+.bloque-grande .bajada{
+  font-family:'Source Serif 4',serif;
+  color:var(--ink-soft); font-size:15px; margin-bottom:10px;
+}
+.bloque-lista{ display:flex; flex-direction:column; min-width:0; }
+.fila-chica{ display:flex; gap:12px; padding:14px 0; border-top:1px solid var(--line); }
+.fila-chica:first-child{ border-top:none; padding-top:0; }
+.fila-chica .mini{
+  width:92px; height:68px; flex:none; border-radius:3px;
+  background:#EDEBF7 center/cover no-repeat;
+}
+.fila-chica h4{
+  font-family:'Source Serif 4',serif;
+  font-size:15px; font-weight:600; line-height:1.3; margin-bottom:4px;
+}
+.bloques-duo{ display:grid; grid-template-columns:1fr 1fr; gap:32px; }
+.bloques-duo .bloque:last-child:nth-child(odd){ grid-column:1/-1; }
+.bloque-compacto .bloque-cuerpo{ grid-template-columns:1fr; gap:14px; }
+.bloque-compacto .bloque-grande .img{ height:150px; }
+.bloque-compacto .bloque-grande h3{ font-size:18px; }
+
+/* --- últimas noticias (lista compacta) --- */
+.ultimas{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:4px;
+  padding:20px;
+}
+.ultimas h2{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:16px; margin-bottom:14px;
+  display:flex; align-items:center;
+}
+.lista-ultimas{ list-style:none; }
+.lista-ultimas li{ display:flex; gap:10px; padding:10px 0; border-top:1px solid var(--line); }
+.lista-ultimas li:first-child{ border-top:none; padding-top:0; }
+.lista-ultimas .hora{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:12px; font-weight:600; color:var(--teal);
+  width:44px; flex:none; padding-top:2px;
+}
+.lista-ultimas a{ font-family:'Source Serif 4',serif; font-size:14px; line-height:1.35; }
+.lista-ultimas a:hover{ color:var(--indigo); }
+.ultimas-movil{ display:none; margin-bottom:28px; }
+
+/* --- ver más --- */
+#mas-section{ scroll-margin-top:130px; }
+.btn-mas{
+  display:block; margin:0 auto 44px;
+  background:var(--card); color:var(--indigo);
+  border:1px solid var(--indigo); border-radius:20px;
+  padding:10px 26px; cursor:pointer;
+  font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px;
+}
+.btn-mas:hover{ background:var(--indigo); color:#fff; }
+
+@media (max-width: 860px){
+  .ultimas-movil{ display:block; }
+  .ultimas-desktop{ display:none; }
+  .ad-alto{ display:none; }
+}
+@media (max-width: 700px){
+  .bloques-duo{ grid-template-columns:1fr; gap:0; }
+  .bloque-cuerpo{ grid-template-columns:1fr; gap:14px; }
+  .bloque-grande .img{ height:200px; }
+  .nav-cats{ padding:0 12px; }
+}
 </style>
 </head>
 <body>
@@ -398,6 +511,15 @@ footer{
     </div>
     <div class="fecha-hoy" id="fecha-hoy"></div>
   </div>
+  <nav class="nav-cats" id="nav-cats" aria-label="Secciones">
+    <button type="button" data-cat="todas" class="activa">Inicio</button>
+    <button type="button" data-cat="politica">Política</button>
+    <button type="button" data-cat="policiales">Policiales</button>
+    <button type="button" data-cat="economia">Economía</button>
+    <button type="button" data-cat="sociedad">Sociedad</button>
+    <button type="button" data-cat="deportes">Deportes</button>
+    <button type="button" data-cat="cultura">Cultura</button>
+  </nav>
 </header>
 
 <main>
@@ -411,27 +533,42 @@ footer{
       Todavía no hay notas publicadas. Cargá la primera desde el panel.
     </div>
 
+    <!-- ULTIMAS NOTICIAS (solo celular) -->
+    <section class="ultimas ultimas-movil oculto" id="ultimas-movil">
+      <h2><span class="play-tri"></span>Últimas noticias</h2>
+      <ul class="lista-ultimas"><li style="color:var(--ink-soft); font-size:13px;">Cargando...</li></ul>
+    </section>
+
     <!-- BANNER PUBLICIDAD ANCHO -->
     <div class="ad-slot" style="min-height:110px; margin-bottom:44px;">
       <span>Espacio publicitario</span>
       Banner 970x90
     </div>
 
-    <!-- ULTIMAS NOTICIAS -->
-    <section>
+    <!-- BLOQUES POR SECCION (se arman por JS) -->
+    <div id="bloques"></div>
+
+    <!-- MAS NOTICIAS / RESULTADOS DE FILTRO -->
+    <section id="mas-section">
       <div class="seccion-titulo">
-        <h2><span class="play-tri"></span><span id="titulo-seccion">Últimas noticias</span></h2>
+        <h2><span class="play-tri"></span><span id="titulo-seccion">Más noticias</span></h2>
         <span id="contador-cat" style="font-size:12px; color:var(--ink-soft);"></span>
       </div>
       <div class="grilla-notas" id="grilla-notas">
         <div style="grid-column:1/-1; padding:30px; text-align:center; color:var(--ink-soft); font-size:13px;">Cargando notas...</div>
       </div>
+      <button type="button" class="btn-mas oculto" id="btn-mas">Ver más noticias</button>
     </section>
 
   </div>
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
+    <section class="ultimas ultimas-desktop">
+      <h2><span class="play-tri"></span>Últimas noticias</h2>
+      <ul class="lista-ultimas"><li style="color:var(--ink-soft); font-size:13px;">Cargando...</li></ul>
+    </section>
+
     <a href="https://www.facebook.com/Caletaoliviadigital" target="_blank" rel="noopener" class="facebook-box">
       <div class="fb-icono">f</div>
       <h2>Caleta Olivia Digital</h2>
@@ -458,7 +595,7 @@ footer{
       <button>Suscribirme</button>
     </div>
 
-    <div class="ad-slot" style="min-height:400px;">
+    <div class="ad-slot ad-alto" style="min-height:400px;">
       <span>Espacio publicitario</span>
       300x600
     </div>
@@ -488,7 +625,7 @@ footer{
   document.getElementById('anio').textContent = hoy.getFullYear();
 
   const NOMBRES_CAT = {
-    todas: 'Últimas noticias', politica: 'Política', sociedad: 'Sociedad',
+    todas: 'Más noticias', politica: 'Política', sociedad: 'Sociedad',
     economia: 'Economía', deportes: 'Deportes', cultura: 'Cultura', policiales: 'Policiales'
   };
   function categoriaKey(nombre){
@@ -522,6 +659,11 @@ footer{
   let TODAS_LAS_NOTAS = [];
   let notasPrincipales = { principal:null, secundaria1:null, secundaria2:null };
   let notasGrilla = [];
+  let bloques = {};
+  const SECCIONES_GRANDES = ['politica', 'policiales'];
+  const SECCIONES_DUO = ['economia', 'sociedad', 'deportes', 'cultura'];
+  const MIN_NOTAS_BLOQUE = 2;   // una sección con menos notas que esto no muestra bloque (sus notas van a "Más noticias")
+  const PAGINA = 12;            // cuántas notas se muestran en "Más noticias" cada vez
 
     // link de una nota: con título si ya tiene slug, y con el id si todavía no
   function urlNota(n){ return n.slug ? '/nota/' + n.slug : '/nota?id=' + n.id; }
@@ -537,6 +679,7 @@ async function cargarPortada(){
     if(data.length === 0){
       document.getElementById('hero-vacio').style.display = 'block';
       document.getElementById('grilla-notas').innerHTML = '';
+      document.getElementById('mas-section').classList.add('oculto');
       return;
     }
 
@@ -551,12 +694,26 @@ async function cargarPortada(){
     notasPrincipales.principal = elegir('principal');
     notasPrincipales.secundaria1 = elegir('secundaria1');
     notasPrincipales.secundaria2 = elegir('secundaria2');
-    notasGrilla = data.filter(n => !usadas.has(n.id));
+    // bloques por sección: solo se arman si la sección tiene MIN_NOTAS_BLOQUE notas o más.
+    // todo lo que no entra en la portada ni en un bloque va a "Más noticias", así no se pierde ninguna nota.
+    const usadasEnBloques = new Set(usadas);
+    bloques = {};
+    [...SECCIONES_GRANDES, ...SECCIONES_DUO].forEach(cat => {
+      const max = SECCIONES_GRANDES.includes(cat) ? 4 : 3;
+      const lista = data.filter(n => categoriaKey(n.categoria) === cat && !usadas.has(n.id));
+      if(lista.length >= MIN_NOTAS_BLOQUE){
+        bloques[cat] = lista.slice(0, max);
+        bloques[cat].forEach(n => usadasEnBloques.add(n.id));
+      }
+    });
+    notasGrilla = data.filter(n => !usadasEnBloques.has(n.id));
+    mostrados = PAGINA;
 
     renderHero();
-    renderGrilla();
-    render(); // aplica filtro/búsqueda actual (vacío al inicio)
+    renderBloques();
+    renderUltimas(data);
     renderMasLeidas(data);
+    render(); // aplica filtro/búsqueda actual (vacío al inicio) y dibuja "Más noticias"
   }
 
   function renderMasLeidas(data){
@@ -612,44 +769,111 @@ async function cargarPortada(){
     });
   }
 
-  function renderGrilla(){
-    const grilla = document.getElementById('grilla-notas');
-    if(notasGrilla.length === 0){
-      grilla.innerHTML = '<div style="grid-column:1/-1; padding:30px; text-align:center; color:var(--ink-soft); font-size:13px;">No hay más notas por ahora.</div>';
-      return;
-    }
-    grilla.innerHTML = notasGrilla.map(n => {
-      const catKey = categoriaKey(n.categoria);
-      return `
-        <article class="nota-card" data-cat="${catKey}">
-          ${imgBloque(n, 'img', 'sin imagen')}
-          <div class="cuerpo">
-            <div class="cat" data-cat="${catKey}">${n.categoria}</div>
-            <h3><a href="${urlNota(n)}">${n.titulo}</a></h3>
-            <div class="meta"><span>${tiempoRelativo(n.created_at)}</span></div>
-            ${etiquetasHtml(n.etiquetas)}
-          </div>
-        </article>
-      `;
-    }).join('');
-
-    // los clics en categoría dentro de la grilla ya generada necesitan su listener
-    grilla.querySelectorAll('.cat[data-cat]').forEach(etq => {
-      etq.addEventListener('click', () => {
-        aplicarFiltro(etq.dataset.cat);
-        grilla.scrollIntoView({behavior:'smooth', block:'start'});
-      });
-    });
+  // --- armado de tarjetas y bloques ---
+  function cardHtml(n){
+    const catKey = categoriaKey(n.categoria);
+    return `
+      <article class="nota-card" data-cat="${catKey}">
+        ${imgBloque(n, 'img', 'sin imagen')}
+        <div class="cuerpo">
+          <div class="cat" data-cat="${catKey}">${n.categoria}</div>
+          <h3><a href="${urlNota(n)}">${n.titulo}</a></h3>
+          <div class="meta"><span>${tiempoRelativo(n.created_at)}</span></div>
+          ${etiquetasHtml(n.etiquetas)}
+        </div>
+      </article>
+    `;
   }
 
-  // --- filtro de categorías + buscador por texto, combinados ---
+  function filaChica(n){
+    const mini = n.imagen_url ? `<div class="mini" style="background-image:url('${n.imagen_url}');"></div>` : '';
+    return `
+      <article class="fila-chica">
+        ${mini}
+        <div>
+          <h4><a href="${urlNota(n)}">${n.titulo}</a></h4>
+          <div class="meta"><span>${tiempoRelativo(n.created_at)}</span></div>
+        </div>
+      </article>
+    `;
+  }
+
+  function bloqueHtml(cat, compacto){
+    const lista = bloques[cat];
+    if(!lista || lista.length === 0) return '';
+    const g = lista[0];
+    const resto = lista.slice(1);
+    return `
+      <section class="bloque ${compacto ? 'bloque-compacto' : ''}">
+        <div class="bloque-cab">
+          <h2><span class="play-tri"></span>${NOMBRES_CAT[cat] || cat}</h2>
+          <a href="#" data-ver="${cat}">Ver todas</a>
+        </div>
+        <div class="bloque-cuerpo">
+          <article class="bloque-grande">
+            ${imgBloque(g, 'img', '')}
+            <h3><a href="${urlNota(g)}">${g.titulo}</a></h3>
+            ${(!compacto && g.bajada) ? `<p class="bajada">${g.bajada}</p>` : ''}
+            <div class="meta"><span>${tiempoRelativo(g.created_at)}</span></div>
+          </article>
+          <div class="bloque-lista">${resto.map(filaChica).join('')}</div>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderBloques(){
+    const grandes = SECCIONES_GRANDES.map(c => bloqueHtml(c, false)).join('');
+    const duo = SECCIONES_DUO.map(c => bloqueHtml(c, true)).join('');
+    const anuncio = (grandes && duo)
+      ? '<div class="ad-slot" style="min-height:90px; margin-bottom:40px;"><span>Espacio publicitario</span>Banner 728x90</div>'
+      : '';
+    document.getElementById('bloques').innerHTML = grandes + anuncio + (duo ? `<div class="bloques-duo">${duo}</div>` : '');
+  }
+
+  function horaCorta(fechaIso){
+    const f = new Date(fechaIso);
+    const mismoDia = f.toDateString() === new Date().toDateString();
+    return mismoDia
+      ? f.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'})
+      : f.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit'});
+  }
+
+  function renderUltimas(data){
+    const html = data.slice(0, 6).map(n =>
+      `<li><span class="hora">${horaCorta(n.created_at)}</span><a href="${urlNota(n)}">${n.titulo}</a></li>`
+    ).join('');
+    document.querySelectorAll('.lista-ultimas').forEach(ul => { ul.innerHTML = html; });
+  }
+
+  // --- elementos y estado del filtro ---
   const hero = document.getElementById('hero-section');
   const grilla = document.getElementById('grilla-notas');
   const tituloSeccion = document.getElementById('titulo-seccion');
   const contadorCat = document.getElementById('contador-cat');
+  const bloquesEl = document.getElementById('bloques');
+  const masSection = document.getElementById('mas-section');
+  const ultimasMovil = document.getElementById('ultimas-movil');
+  const btnMas = document.getElementById('btn-mas');
 
   let catActiva = 'todas';
   let textoBusqueda = '';
+  let mostrados = PAGINA;
+
+  function bindCats(cont){
+    cont.querySelectorAll('.cat[data-cat]').forEach(etq => {
+      etq.addEventListener('click', () => {
+        aplicarFiltro(etq.dataset.cat);
+        masSection.scrollIntoView({behavior:'smooth', block:'start'});
+      });
+    });
+  }
+
+  function renderGrilla(){
+    grilla.innerHTML = notasGrilla.slice(0, mostrados).map(cardHtml).join('');
+    bindCats(grilla);
+    btnMas.classList.toggle('oculto', mostrados >= notasGrilla.length);
+  }
 
   function aplicarFiltro(cat){
     catActiva = cat;
@@ -661,10 +885,15 @@ async function cargarPortada(){
     const hayTexto = textoBusqueda.trim().length > 0;
     const filtroActivo = (catActiva !== 'todas') || hayTexto;
     hero.style.display = filtroActivo ? 'none' : 'grid';
+    bloquesEl.classList.toggle('oculto', filtroActivo);
+    ultimasMovil.classList.toggle('oculto', filtroActivo);
+    document.querySelectorAll('#nav-cats button').forEach(b => {
+      b.classList.toggle('activa', !hayTexto && b.dataset.cat === catActiva);
+    });
 
     let visibles = 0;
     if(filtroActivo){
-      // en modo filtro/búsqueda se muestran TODAS las notas publicadas (incluidas las destacadas), no solo la grilla regular
+      // en modo filtro/búsqueda se muestran TODAS las notas publicadas (incluidas las destacadas y las de los bloques)
       const resultado = TODAS_LAS_NOTAS.filter(n => {
         const matchCat = (catActiva === 'todas') || (categoriaKey(n.categoria) === catActiva);
         const matchTexto = !hayTexto || normalizar(n.titulo).includes(normalizar(textoBusqueda));
@@ -673,26 +902,14 @@ async function cargarPortada(){
       visibles = resultado.length;
       grilla.innerHTML = resultado.length === 0
         ? '<div style="grid-column:1/-1; padding:30px; text-align:center; color:var(--ink-soft); font-size:13px;">No se encontraron notas.</div>'
-        : resultado.map(n => {
-            const catKey = categoriaKey(n.categoria);
-            return `
-              <article class="nota-card" data-cat="${catKey}">
-                ${imgBloque(n, 'img', 'sin imagen')}
-                <div class="cuerpo">
-                  <div class="cat" data-cat="${catKey}">${n.categoria}</div>
-                  <h3><a href="${urlNota(n)}">${n.titulo}</a></h3>
-                  <div class="meta"><span>${tiempoRelativo(n.created_at)}</span></div>
-                  ${etiquetasHtml(n.etiquetas)}
-                </div>
-              </article>
-            `;
-          }).join('');
-      grilla.querySelectorAll('.cat[data-cat]').forEach(etq => {
-        etq.addEventListener('click', () => aplicarFiltro(etq.dataset.cat));
-      });
+        : resultado.map(cardHtml).join('');
+      bindCats(grilla);
+      btnMas.classList.add('oculto');
+      masSection.classList.remove('oculto');
     } else {
       renderGrilla();
       visibles = notasGrilla.length;
+      masSection.classList.toggle('oculto', notasGrilla.length === 0);
     }
 
     if (hayTexto){
@@ -731,6 +948,28 @@ async function cargarPortada(){
     btnLimpiar.style.display = 'none';
     render();
     inputBuscar.focus();
+  });
+
+  // --- navegación por secciones, "Ver todas" de cada bloque y "Ver más noticias" ---
+  document.getElementById('nav-cats').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-cat]');
+    if(!b) return;
+    textoBusqueda = '';
+    inputBuscar.value = '';
+    btnLimpiar.style.display = 'none';
+    aplicarFiltro(b.dataset.cat);
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+  bloquesEl.addEventListener('click', (e) => {
+    const a = e.target.closest('a[data-ver]');
+    if(!a) return;
+    e.preventDefault();
+    aplicarFiltro(a.dataset.ver);
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+  btnMas.addEventListener('click', () => {
+    mostrados += PAGINA;
+    renderGrilla();
   });
 
   cargarPortada();
