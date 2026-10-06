@@ -517,8 +517,7 @@ footer{
     <button type="button" data-cat="policiales">Policiales</button>
     <button type="button" data-cat="economia">Economía</button>
     <button type="button" data-cat="sociedad">Sociedad</button>
-    <button type="button" data-cat="deportes">Deportes</button>
-    <button type="button" data-cat="cultura">Cultura</button>
+    <button type="button" data-cat="mas" id="nav-mas" class="oculto">Más noticias</button>
   </nav>
 </header>
 
@@ -661,7 +660,7 @@ footer{
   let notasGrilla = [];
   let bloques = {};
   const SECCIONES_GRANDES = ['politica', 'policiales'];
-  const SECCIONES_DUO = ['economia', 'sociedad', 'deportes', 'cultura'];
+  const SECCIONES_DUO = ['economia', 'sociedad'];
   const MIN_NOTAS_BLOQUE = 2;   // una sección con menos notas que esto no muestra bloque (sus notas van a "Más noticias")
   const PAGINA = 12;            // cuántas notas se muestran en "Más noticias" cada vez
 
@@ -855,6 +854,7 @@ async function cargarPortada(){
   const masSection = document.getElementById('mas-section');
   const ultimasMovil = document.getElementById('ultimas-movil');
   const btnMas = document.getElementById('btn-mas');
+  const navMas = document.getElementById('nav-mas');
 
   let catActiva = 'todas';
   let textoBusqueda = '';
@@ -882,6 +882,7 @@ async function cargarPortada(){
 
   function render(){
     if(TODAS_LAS_NOTAS.length === 0) return;
+    navMas.classList.toggle('oculto', notasGrilla.length === 0); // el botón "Más noticias" del menú solo aparece si hay notas para mostrar ahí
     const hayTexto = textoBusqueda.trim().length > 0;
     const filtroActivo = (catActiva !== 'todas') || hayTexto;
     hero.style.display = filtroActivo ? 'none' : 'grid';
@@ -957,6 +958,12 @@ async function cargarPortada(){
     textoBusqueda = '';
     inputBuscar.value = '';
     btnLimpiar.style.display = 'none';
+    if(b.dataset.cat === 'mas'){
+      // "Más noticias": vuelve al inicio y baja hasta esa sección
+      aplicarFiltro('todas');
+      masSection.scrollIntoView({behavior:'smooth', block:'start'});
+      return;
+    }
     aplicarFiltro(b.dataset.cat);
     window.scrollTo({top:0, behavior:'smooth'});
   });

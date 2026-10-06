@@ -328,7 +328,7 @@ button, input, select, textarea{ font-family:inherit; }
           <div class="fila">
             <div class="campo">
               <label>Categoría</label>
-              <select id="f-categoria"><option>Política</option><option>Sociedad</option><option>Economía</option><option>Deportes</option><option>Cultura</option><option>Policiales</option></select>
+              <select id="f-categoria"><option>Política</option><option>Sociedad</option><option>Economía</option><option>Policiales</option></select>
             </div>
             <div class="campo">
               <label>Bajada</label>
@@ -924,6 +924,7 @@ function cancelarEdicion(){
   document.getElementById('f-cuerpo').value = '';
   document.getElementById('f-etiquetas').value = '';
   document.getElementById('f-posicion').value = 'regular';
+  document.getElementById('f-categoria').querySelectorAll('option[data-extra]').forEach(o => o.remove());
   document.getElementById('f-categoria').value = 'Política';
   document.getElementById('f-imagen').value = '';
   document.getElementById('upload-box-txt').textContent = 'Arrastrá una imagen o hacé clic para subirla';
@@ -944,7 +945,15 @@ async function editarNota(id){
   document.getElementById('f-bajada').value = n.bajada || '';
   document.getElementById('f-firma').value = (n.autor_nombre && n.autor_nombre !== 'Redacción') ? n.autor_nombre : '';
   document.getElementById('f-cuerpo').value = n.cuerpo || '';
-  document.getElementById('f-categoria').value = n.categoria || 'Política';
+  // si la nota tiene una categoría que ya no está en la lista (ej. una vieja), se agrega solo para esta edición y no se pierde
+  const selCat = document.getElementById('f-categoria');
+  selCat.querySelectorAll('option[data-extra]').forEach(o => o.remove());
+  if(n.categoria && ![...selCat.options].some(o => o.value === n.categoria)){
+    const extra = new Option(n.categoria, n.categoria);
+    extra.dataset.extra = '1';
+    selCat.add(extra);
+  }
+  selCat.value = n.categoria || 'Política';
   document.getElementById('f-etiquetas').value = (n.etiquetas || []).join(', ');
   document.getElementById('f-posicion').value = n.posicion || 'regular';
   if(n.imagen_url) document.getElementById('upload-box-txt').textContent = '✓ ya tiene imagen cargada (subí otra para reemplazarla)';
