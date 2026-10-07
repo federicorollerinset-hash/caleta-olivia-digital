@@ -89,12 +89,14 @@ header{
 /* --- layout general --- */
 main{
   max-width:1180px; margin:0 auto;
-  padding:32px 24px 64px;
+  padding:0 24px 64px;
   display:grid;
   grid-template-columns: 1fr 300px;
   gap:36px;
 }
 .columna-principal{ min-width:0; }
+/* zona de ancho completo: destacadas y banner, por encima de las dos columnas */
+.portada-ancha{ max-width:1180px; margin:0 auto; padding:32px 24px 0; }
 .eyebrow{
   display:flex; align-items:center;
   font-family:'Space Grotesk',sans-serif;
@@ -107,7 +109,7 @@ main{
 /* --- hero --- */
 .hero{
   display:grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: 1.7fr 1fr;
   gap:24px;
   margin-bottom:40px;
   align-items:stretch;
@@ -120,7 +122,7 @@ main{
   display:flex; flex-direction:column;
 }
 .hero-img{
-  height:320px;
+  height:360px;
   background:linear-gradient(135deg, var(--indigo) 0%, var(--indigo-deep) 100%);
   display:flex; align-items:center; justify-content:center;
   color:rgba(255,255,255,.35);
@@ -132,7 +134,7 @@ main{
 .hero-texto h1{
   font-family:'Source Serif 4',serif;
   font-weight:700;
-  font-size:30px;
+  font-size:32px;
   line-height:1.2;
   margin-bottom:12px;
 }
@@ -371,6 +373,7 @@ footer{
 @media (max-width: 860px){
   main{ grid-template-columns:1fr; }
   .hero{ grid-template-columns:1fr; }
+  .hero-img{ height:320px; }
   .grilla-notas{ grid-template-columns:1fr 1fr; }
   .nota-mini-img{ min-height:200px; }
 }
@@ -521,9 +524,7 @@ footer{
   </nav>
 </header>
 
-<main>
-  <div class="columna-principal">
-
+<div class="portada-ancha">
     <!-- HERO -->
     <section class="hero" id="hero-section" style="display:none;">
       <!-- se completa por JS con la nota principal + 2 destacadas -->
@@ -543,6 +544,10 @@ footer{
       <span>Espacio publicitario</span>
       Banner 970x90
     </div>
+</div>
+
+<main>
+  <div class="columna-principal">
 
     <!-- BLOQUES POR SECCION (se arman por JS) -->
     <div id="bloques"></div>
