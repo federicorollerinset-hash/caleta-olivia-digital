@@ -89,7 +89,7 @@ header{
 /* --- layout general --- */
 main{
   max-width:1180px; margin:0 auto;
-  padding:0 24px 64px;
+  padding:32px 24px 64px;
   display:grid;
   grid-template-columns: 1fr 300px;
   gap:36px;
@@ -524,7 +524,9 @@ footer{
   </nav>
 </header>
 
-<div class="portada-ancha">
+<main>
+  <div class="columna-principal">
+
     <!-- HERO -->
     <section class="hero" id="hero-section" style="display:none;">
       <!-- se completa por JS con la nota principal + 2 destacadas -->
@@ -544,10 +546,8 @@ footer{
       <span>Espacio publicitario</span>
       Banner 970x90
     </div>
-</div>
 
-<main>
-  <div class="columna-principal">
+
 
     <!-- BLOQUES POR SECCION (se arman por JS) -->
     <div id="bloques"></div>
