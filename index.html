@@ -235,6 +235,23 @@ main{
 }
 .nota-card .meta{ margin-top:auto; padding-top:8px; }
 
+/* --- clima --- */
+.header-der{ display:flex; align-items:center; gap:18px; }
+.clima{
+  display:flex; align-items:center; gap:8px;
+  font-family:'Space Grotesk',sans-serif; font-size:13px; color:var(--ink);
+  padding-right:18px; border-right:1px solid var(--line); white-space:nowrap;
+}
+.clima .clima-icono{ font-size:22px; line-height:1; }
+.clima .clima-temp{ font-weight:700; font-size:18px; }
+.clima .clima-det{ display:flex; flex-direction:column; line-height:1.2; font-size:11px; color:var(--ink-soft); }
+.clima .clima-det b{ color:var(--ink); font-weight:600; font-size:12px; }
+@media (max-width:560px){
+  .header-der{ width:100%; justify-content:space-between; gap:10px; }
+  .clima{ padding-right:10px; }
+  .clima .clima-det{ display:none; }
+}
+
 /* --- encuesta --- */
 .encuesta-sticky{ position:sticky; top:16px; }
 .encuesta{
@@ -559,7 +576,10 @@ footer{
       <input type="text" id="buscador-input" placeholder="Buscar noticias...">
       <span class="limpiar" id="buscador-limpiar">✕</span>
     </div>
-    <div class="fecha-hoy" id="fecha-hoy"></div>
+    <div class="header-der">
+      <div class="clima" id="clima" style="display:none;"></div>
+      <div class="fecha-hoy" id="fecha-hoy"></div>
+    </div>
   </div>
   <nav class="nav-cats" id="nav-cats" aria-label="Secciones">
     <button type="button" data-cat="todas" class="activa">Inicio</button>
@@ -669,6 +689,45 @@ footer{
   const SUPABASE_URL = 'https://rmbutukkldktjknvhizj.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_HJbQIiqaB6MGWnfTq0GlHw_dDO7tbAe';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    /* ---------- CLIMA (Open-Meteo, sin clave) ---------- */
+  async function cargarClima(){
+    const box = document.getElementById('clima');
+    if(!box) return;
+    const wmo = c => {
+      if(c === 0) return ['☀️','Despejado'];
+      if(c <= 2) return ['⛅','Parcialmente nublado'];
+      if(c === 3) return ['☁️','Nublado'];
+      if(c === 45 || c === 48) return ['🌫️','Niebla'];
+      if(c >= 51 && c <= 57) return ['🌦️','Llovizna'];
+      if(c >= 61 && c <= 67) return ['🌧️','Lluvia'];
+      if(c >= 71 && c <= 77) return ['🌨️','Nieve'];
+      if(c >= 80 && c <= 82) return ['🌦️','Chubascos'];
+      if(c === 85 || c === 86) return ['🌨️','Nevadas'];
+      if(c >= 95) return ['⛈️','Tormenta'];
+      return ['🌡️','—'];
+    };
+    try{
+      let d = null;
+      try{ const g = JSON.parse(sessionStorage.getItem('clima_co') || 'null'); if(g && Date.now() - g.t < 15*60*1000) d = g.d; }catch(e){}
+      if(!d){
+        const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-46.44&longitude=-67.52&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FArgentina%2FBuenos_Aires&forecast_days=1');
+        if(!r.ok) throw new Error('clima ' + r.status);
+        d = await r.json();
+        try{ sessionStorage.setItem('clima_co', JSON.stringify({ t: Date.now(), d })); }catch(e){}
+      }
+      const [icono, texto] = wmo(d.current.weather_code);
+      const temp = Math.round(d.current.temperature_2m);
+      const max = Math.round(d.daily.temperature_2m_max[0]);
+      const min = Math.round(d.daily.temperature_2m_min[0]);
+      const viento = Math.round(d.current.wind_speed_10m);
+      box.innerHTML = '<span class="clima-icono" title="'+texto+'">'+icono+'</span>' +
+        '<span class="clima-temp">'+temp+'°</span>' +
+        '<span class="clima-det"><b>Caleta Olivia</b><span>'+texto+' · Máx '+max+'° Mín '+min+'° · Viento '+viento+' km/h</span></span>';
+      box.style.display = 'flex';
+    }catch(e){ console.error('Clima:', e); box.style.display = 'none'; }
+  }
+  cargarClima();
 
   /* ---------- ENCUESTA ---------- */
   async function cargarEncuesta(){
