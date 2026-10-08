@@ -156,6 +156,50 @@ const PANORAMA_HTML = `<!DOCTYPE html>
   .logo img{ height:52px; }
   .clock{ font-size:13px; color:var(--ink-soft); white-space:nowrap; text-align:right; line-height:1.3; }
   .clock strong{ font-family:'Space Grotesk',sans-serif; font-size:16px; color:var(--ink); }
+.buscador{
+  position:relative;
+  flex:1;
+  max-width:340px;
+}
+.buscador input{
+  width:100%;
+  padding:9px 14px 9px 38px;
+  border:1px solid var(--line);
+  border-radius:20px;
+  font-size:13px;
+  font-family:'Inter',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+}
+.buscador input:focus{
+  outline:none; border-color:var(--indigo); background:var(--card);
+}
+.buscador svg{
+  position:absolute; left:13px; top:50%; transform:translateY(-50%);
+  width:15px; height:15px; stroke:var(--ink-soft); pointer-events:none;
+}
+.buscador .limpiar{
+  position:absolute; right:10px; top:50%; transform:translateY(-50%);
+  font-size:16px; color:var(--ink-soft); cursor:pointer; display:none; line-height:1;
+}
+  /* --- clima --- */
+  .header-der{ display:flex; align-items:center; gap:18px; }
+  .clima{
+    display:flex; align-items:center; gap:8px;
+    font-family:'Space Grotesk',sans-serif; font-size:13px; color:var(--ink);
+    padding-right:18px; border-right:1px solid var(--line); white-space:nowrap;
+  }
+  .clima .clima-icono{ font-size:22px; line-height:1; }
+  .clima .clima-temp{ font-weight:700; font-size:18px; }
+  .clima .clima-det{ display:flex; flex-direction:column; line-height:1.2; font-size:11px; color:var(--ink-soft); }
+  .clima .clima-det b{ color:var(--ink); font-weight:600; font-size:12px; }
+  @media (max-width:560px){
+    .header-der{ width:100%; justify-content:space-between; gap:10px; }
+    .clima{ padding-right:10px; }
+    .clima .clima-det{ display:none; }
+  }
+  
+  .fecha-hoy{ font-size:13px; color:var(--ink-soft); white-space:nowrap; }
   .nav-cats{ max-width:1180px; margin:0 auto; padding:0 24px; display:flex; gap:2px; overflow-x:auto; border-top:1px solid var(--line); scrollbar-width:none; }
   .nav-cats::-webkit-scrollbar{ display:none; }
   .nav-cats a{ white-space:nowrap; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px; color:var(--ink-soft); padding:11px 14px; border-bottom:2px solid transparent; }
@@ -211,7 +255,15 @@ const PANORAMA_HTML = `<!DOCTYPE html>
 <header>
   <div class="header-top">
     <a href="/" class="logo"><img src="/logo.png" alt="Caleta Olivia Digital"></a>
-    <div class="clock"><strong id="clock-time">--:--</strong><br><span id="clock-date">-- --- ----</span></div>
+    <div class="buscador">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="buscador-input" placeholder="Buscar titulares...">
+      <span class="limpiar" id="buscador-limpiar">✕</span>
+    </div>
+    <div class="header-der">
+      <div class="clima" id="clima" style="display:none;"></div>
+      <div class="fecha-hoy" id="clock-date"></div>
+    </div>
   </div>
   <nav class="nav-cats" aria-label="Secciones">
     <a href="/">Inicio</a>
@@ -237,14 +289,65 @@ let allItems = [];
 let statuses = {};
 let activeSourceFilter = 'all';
 let activeCatFilter = 'all';
+let textoBusqueda = '';
+const normalizar = t => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 function updateClock(){
-  const now = new Date();
-  document.getElementById('clock-time').textContent = now.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
-  document.getElementById('clock-date').textContent = now.toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const h = new Date();
+  document.getElementById('clock-date').textContent = dias[h.getDay()].charAt(0).toUpperCase() + dias[h.getDay()].slice(1) + ' ' + h.getDate() + ' de ' + meses[h.getMonth()] + ' de ' + h.getFullYear();
 }
 updateClock();
 setInterval(updateClock, 15000);
+const inputBuscar = document.getElementById('buscador-input');
+const btnLimpiar = document.getElementById('buscador-limpiar');
+inputBuscar.addEventListener('input', () => {
+  textoBusqueda = normalizar(inputBuscar.value.trim());
+  btnLimpiar.style.display = inputBuscar.value ? 'block' : 'none';
+  render();
+});
+btnLimpiar.addEventListener('click', () => { inputBuscar.value = ''; textoBusqueda = ''; btnLimpiar.style.display = 'none'; render(); inputBuscar.focus(); });
+  /* ---------- CLIMA (Open-Meteo, sin clave) ---------- */
+  async function cargarClima(){
+    const box = document.getElementById('clima');
+    if(!box) return;
+    const wmo = c => {
+      if(c === 0) return ['☀️','Despejado'];
+      if(c <= 2) return ['⛅','Parcialmente nublado'];
+      if(c === 3) return ['☁️','Nublado'];
+      if(c === 45 || c === 48) return ['🌫️','Niebla'];
+      if(c >= 51 && c <= 57) return ['🌦️','Llovizna'];
+      if(c >= 61 && c <= 67) return ['🌧️','Lluvia'];
+      if(c >= 71 && c <= 77) return ['🌨️','Nieve'];
+      if(c >= 80 && c <= 82) return ['🌦️','Chubascos'];
+      if(c === 85 || c === 86) return ['🌨️','Nevadas'];
+      if(c >= 95) return ['⛈️','Tormenta'];
+      return ['🌡️','—'];
+    };
+    try{
+      let d = null;
+      try{ const g = JSON.parse(sessionStorage.getItem('clima_co') || 'null'); if(g && Date.now() - g.t < 15*60*1000) d = g.d; }catch(e){}
+      if(!d){
+        const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-46.44&longitude=-67.52&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FArgentina%2FBuenos_Aires&forecast_days=1');
+        if(!r.ok) throw new Error('clima ' + r.status);
+        d = await r.json();
+        try{ sessionStorage.setItem('clima_co', JSON.stringify({ t: Date.now(), d })); }catch(e){}
+      }
+      const [icono, texto] = wmo(d.current.weather_code);
+      const temp = Math.round(d.current.temperature_2m);
+      const max = Math.round(d.daily.temperature_2m_max[0]);
+      const min = Math.round(d.daily.temperature_2m_min[0]);
+      const viento = Math.round(d.current.wind_speed_10m);
+      box.innerHTML = '<span class="clima-icono" title="'+texto+'">'+icono+'</span>' +
+        '<span class="clima-temp">'+temp+'°</span>' +
+        '<span class="clima-det"><b>Caleta Olivia</b><span>'+texto+' · Máx '+max+'° Mín '+min+'° · Viento '+viento+' km/h</span></span>';
+      box.style.display = 'flex';
+    }catch(e){ console.error('Clima:', e); box.style.display = 'none'; }
+  }
+  cargarClima();
+
+
 
 function buildToolbars(){
   const srcBar = document.getElementById('toolbar-src');
@@ -288,7 +391,8 @@ function render(){
 
   const items = allItems
     .filter(i => activeSourceFilter === 'all' || i.sourceId === activeSourceFilter)
-    .filter(i => activeCatFilter === 'all' || i.category === activeCatFilter);
+    .filter(i => activeCatFilter === 'all' || i.category === activeCatFilter)
+    .filter(i => !textoBusqueda || normalizar(i.title).includes(textoBusqueda));
 
   if (items.length === 0){
     const div = document.createElement('div'); div.className = 'empty';
