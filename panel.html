@@ -310,6 +310,7 @@ button, input, select, textarea{ font-family:inherit; }
       <a data-vista="v-mis-notas"><span class="play-tri"></span><span class="txt">Mis notas</span></a>
       <a data-vista="v-publicadas"><span class="play-tri"></span><span class="txt">Publicadas</span></a>
       <a data-vista="v-estadisticas" id="nav-estadisticas" style="display:none;"><span class="play-tri"></span><span class="txt">Estadísticas</span></a>
+      <a data-vista="v-encuestas" id="nav-encuestas" style="display:none;"><span class="play-tri"></span><span class="txt">Encuestas</span></a>
       <div class="separador" id="separador-admin" style="display:none;"></div>
       <a data-vista="v-usuarios" id="nav-usuarios" style="display:none;"><span class="play-tri"></span><span class="txt">Usuarios</span></a>
     </nav>
@@ -412,6 +413,39 @@ button, input, select, textarea{ font-family:inherit; }
         <p class="subt">Vistas acumuladas de las notas publicadas en el sitio.</p>
         <div class="tarjetas-stats" id="stats-lecturas"></div>
         <div class="tabla-notas" id="ranking-lecturas"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
+      </section>
+
+      <!-- ENCUESTAS (admin/editor) -->
+      <section class="vista" id="v-encuestas">
+        <h2>Encuestas</h2>
+        <p class="subt">La encuesta activa aparece en la portada y en todas las notas. Al crear una nueva, la anterior se desactiva.</p>
+        <div class="form-nota" style="margin-bottom:24px;">
+          <div class="campo">
+            <label>Pregunta</label>
+            <input type="text" id="enc-pregunta" placeholder="¿Qué opinás de...?">
+          </div>
+          <div class="fila" style="grid-template-columns:1fr auto; align-items:end;">
+            <div class="campo"><label>Opción 1 (obligatoria)</label><input type="text" class="enc-texto" placeholder="Ej: Claudio Vidal (PSC)"></div>
+            <div class="campo"><label>Foto (opcional)</label><input type="file" class="enc-foto-archivo" accept="image/*" style="font-size:12px;"></div>
+          </div>
+          <div class="fila" style="grid-template-columns:1fr auto; align-items:end;">
+            <div class="campo"><label>Opción 2 (obligatoria)</label><input type="text" class="enc-texto" placeholder="Ej: Claudio Vidal (PSC)"></div>
+            <div class="campo"><label>Foto (opcional)</label><input type="file" class="enc-foto-archivo" accept="image/*" style="font-size:12px;"></div>
+          </div>
+          <div class="fila" style="grid-template-columns:1fr auto; align-items:end;">
+            <div class="campo"><label>Opción 3 (opcional)</label><input type="text" class="enc-texto" placeholder="Ej: Claudio Vidal (PSC)"></div>
+            <div class="campo"><label>Foto (opcional)</label><input type="file" class="enc-foto-archivo" accept="image/*" style="font-size:12px;"></div>
+          </div>
+          <div class="fila" style="grid-template-columns:1fr auto; align-items:end;">
+            <div class="campo"><label>Opción 4 (opcional)</label><input type="text" class="enc-texto" placeholder="Ej: Claudio Vidal (PSC)"></div>
+            <div class="campo"><label>Foto (opcional)</label><input type="file" class="enc-foto-archivo" accept="image/*" style="font-size:12px;"></div>
+          </div>
+          <div class="campo" id="enc-msg" style="display:none; font-size:13px;"></div>
+          <div class="acciones-form">
+            <button class="btn-enviar" id="enc-btn" onclick="crearEncuesta()">Publicar encuesta</button>
+          </div>
+        </div>
+        <div class="tabla-usuarios" id="lista-encuestas"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
       </section>
 
       <!-- USUARIOS (solo admin) -->
@@ -727,27 +761,29 @@ function mostrarPanel(sesion){
   const badge = document.getElementById('rol-badge');
   const navUsuarios = document.getElementById('nav-usuarios');
   const navEstadisticas = document.getElementById('nav-estadisticas');
+  const navEncuestas = document.getElementById('nav-encuestas');
   const separador = document.getElementById('separador-admin');
 
   badge.classList.remove('rol-admin','rol-editor','rol-redactor');
   if(usuarioActual.rol === 'admin'){
     badge.textContent = 'Admin'; badge.classList.add('rol-admin');
     navUsuarios.style.display = 'flex'; separador.style.display = 'block';
-    navEstadisticas.style.display = 'flex';
+    navEstadisticas.style.display = 'flex'; navEncuestas.style.display = 'flex';
   } else if(usuarioActual.rol === 'editor'){
     badge.textContent = 'Editor'; badge.classList.add('rol-editor');
     navUsuarios.style.display = 'none'; separador.style.display = 'none';
-    navEstadisticas.style.display = 'flex';
+    navEstadisticas.style.display = 'flex'; navEncuestas.style.display = 'flex';
   } else {
     badge.textContent = 'Redactor'; badge.classList.add('rol-redactor');
     navUsuarios.style.display = 'none'; separador.style.display = 'none';
-    navEstadisticas.style.display = 'none';
+    navEstadisticas.style.display = 'none'; navEncuestas.style.display = 'none';
   }
 
   cargarMisNotas();
   cargarPublicadas();
   if(usuarioActual.rol === 'admin') cargarUsuarios();
   if(usuarioActual.rol === 'admin' || usuarioActual.rol === 'editor') cargarEstadisticas();
+  if(usuarioActual.rol === 'admin' || usuarioActual.rol === 'editor') cargarEncuestas();
 }
 
 function salir(){
@@ -1156,6 +1192,75 @@ async function crearUsuario(){
   document.getElementById('nu-email').value = '';
   document.getElementById('nu-pass').value = '';
   cargarUsuarios();
+}
+
+// ---------- ENCUESTAS ----------
+async function cargarEncuestas(){
+  const cont = document.getElementById('lista-encuestas');
+  const resp = await authFetch('/api/encuestas');
+  if(!resp.ok){ cont.innerHTML = '<div style="padding:20px;">Error al cargar encuestas.</div>'; return; }
+  const { data } = await resp.json();
+  if(!data || !data.length){ cont.innerHTML = '<div style="padding:20px; color:var(--ink-soft); font-size:13px;">Todavía no hay encuestas.</div>'; return; }
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  cont.innerHTML = data.map(e => {
+    const ops = e.encuesta_opciones || [];
+    const total = ops.reduce((s,o) => s + (o.votos||0), 0);
+    const detalle = ops.map(o => esc(o.texto) + ': ' + (o.votos||0) + (total ? ' (' + Math.round((o.votos||0)*100/total) + '%)' : '')).join(' · ');
+    return `
+    <div class="fila-usuario">
+      <div class="info">
+        <div class="nombre">${esc(e.pregunta)} <span class="estado-badge ${e.activa ? 'estado-publicada' : 'estado-borrador'}">${e.activa ? 'Activa' : 'Cerrada'}</span></div>
+        <div class="email">${total} voto${total===1?'':'s'} — ${detalle}</div>
+      </div>
+      <div class="acciones-fila">
+        <button class="btn-editar" onclick="alternarEncuesta('${e.id}', ${!e.activa})">${e.activa ? 'Cerrar' : 'Reactivar'}</button>
+        <button class="btn-borrar" onclick="borrarEncuesta('${e.id}')">Borrar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function crearEncuesta(){
+  const msg = document.getElementById('enc-msg');
+  const btn = document.getElementById('enc-btn');
+  const pregunta = document.getElementById('enc-pregunta').value.trim();
+  const textos = [...document.querySelectorAll('.enc-texto')];
+  const archivos = [...document.querySelectorAll('.enc-foto-archivo')];
+  const err = t => { msg.style.display = 'block'; msg.style.color = '#C4382E'; msg.textContent = t; };
+  const opciones = [];
+  textos.forEach((inp, i) => { if(inp.value.trim()) opciones.push({ texto: inp.value.trim(), archivo: archivos[i].files[0] || null }); });
+  if(!pregunta) return err('Escribí la pregunta.');
+  if(opciones.length < 2) return err('Cargá al menos 2 opciones.');
+
+  btn.disabled = true; btn.textContent = 'Publicando...';
+  msg.style.display = 'block'; msg.style.color = 'var(--ink-soft)'; msg.textContent = 'Subiendo fotos y guardando...';
+  try{
+    for(const o of opciones){
+      o.foto = o.archivo ? await subirImagen(o.archivo) : null;
+      delete o.archivo;
+    }
+    const resp = await authFetch('/api/encuestas', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pregunta, opciones }) });
+    const r = await resp.json().catch(() => ({}));
+    if(!resp.ok) throw new Error(r.error || 'No se pudo crear la encuesta.');
+    msg.style.color = '#1F9254'; msg.textContent = 'Encuesta publicada. Ya se ve en la portada y en las notas.';
+    document.getElementById('enc-pregunta').value = '';
+    textos.forEach(i => i.value = ''); archivos.forEach(i => i.value = '');
+    cargarEncuestas();
+  }catch(e){ err(e.message); }
+  btn.disabled = false; btn.textContent = 'Publicar encuesta';
+}
+
+async function alternarEncuesta(id, activa){
+  const resp = await authFetch('/api/encuestas/' + id, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ activa }) });
+  if(!resp.ok){ alert('No se pudo actualizar la encuesta.'); return; }
+  cargarEncuestas();
+}
+
+async function borrarEncuesta(id){
+  if(!confirm('¿Borrar esta encuesta y sus votos? No se puede deshacer.')) return;
+  const resp = await authFetch('/api/encuestas/' + id, { method:'DELETE' });
+  if(!resp.ok){ alert('No se pudo borrar la encuesta.'); return; }
+  cargarEncuestas();
 }
 </script>
 </body>

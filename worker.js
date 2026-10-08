@@ -891,6 +891,56 @@ async function handleApi(request, env, url) {
     return jsonResponse({ data: filas[0] });
   }
 
+  // ---------- ENCUESTAS (admin y editor) ----------
+  if (pathname === '/api/encuestas' && metodo === 'GET') {
+    const sesion = await requireSesion(request, env);
+    if (!sesion || sesion.rol === 'redactor') return jsonResponse({ error: 'No autorizado.' }, 403);
+    const res = await sbService(env, 'encuestas?select=*,encuesta_opciones(*)&order=creada.desc&limit=30');
+    const data = await res.json();
+    if (Array.isArray(data)) data.forEach(e => (e.encuesta_opciones || []).sort((a, b) => a.orden - b.orden));
+    return jsonResponse({ data });
+  }
+
+  if (pathname === '/api/encuestas' && metodo === 'POST') {
+    const sesion = await requireSesion(request, env);
+    if (!sesion || sesion.rol === 'redactor') return jsonResponse({ error: 'No autorizado.' }, 403);
+    const datos = await request.json().catch(() => null);
+    const pregunta = datos && String(datos.pregunta || '').trim();
+    const opciones = datos && Array.isArray(datos.opciones)
+      ? datos.opciones.filter(o => o && String(o.texto || '').trim()).slice(0, 6) : [];
+    if (!pregunta || opciones.length < 2) return jsonResponse({ error: 'Escribí la pregunta y al menos 2 opciones.' }, 400);
+
+    // solo una encuesta activa a la vez
+    await sbService(env, 'encuestas?activa=eq.true', { method: 'PATCH', body: JSON.stringify({ activa: false }), prefer: 'return=minimal' });
+    const res = await sbService(env, 'encuestas', { method: 'POST', body: JSON.stringify({ pregunta, activa: true }) });
+    if (!res.ok) return jsonResponse({ error: 'No se pudo crear la encuesta.' }, 500);
+    const enc = (await res.json())[0];
+    const filas = opciones.map((o, i) => ({
+      encuesta_id: enc.id, texto: String(o.texto).trim(), orden: i + 1, foto: o.foto ? String(o.foto) : null
+    }));
+    const resOp = await sbService(env, 'encuesta_opciones', { method: 'POST', body: JSON.stringify(filas), prefer: 'return=minimal' });
+    if (!resOp.ok) return jsonResponse({ error: 'Se creó la encuesta pero fallaron las opciones.' }, 500);
+    return jsonResponse({ data: enc });
+  }
+
+  if (pathname.startsWith('/api/encuestas/') && (metodo === 'PUT' || metodo === 'DELETE')) {
+    const sesion = await requireSesion(request, env);
+    if (!sesion || sesion.rol === 'redactor') return jsonResponse({ error: 'No autorizado.' }, 403);
+    const id = pathname.split('/').pop();
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return jsonResponse({ error: 'ID inválido.' }, 400);
+    if (metodo === 'DELETE') {
+      await sbService(env, `encuestas?id=eq.${id}`, { method: 'DELETE', prefer: 'return=minimal' });
+      return jsonResponse({ ok: true });
+    }
+    const datos = await request.json().catch(() => null);
+    if (!datos || typeof datos.activa !== 'boolean') return jsonResponse({ error: 'Datos inválidos.' }, 400);
+    if (datos.activa) {
+      await sbService(env, 'encuestas?activa=eq.true', { method: 'PATCH', body: JSON.stringify({ activa: false }), prefer: 'return=minimal' });
+    }
+    await sbService(env, `encuestas?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ activa: datos.activa }), prefer: 'return=minimal' });
+    return jsonResponse({ ok: true });
+  }
+
   return null; // no es una ruta de /api que manejemos acá
 }
 
