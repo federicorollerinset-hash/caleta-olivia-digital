@@ -139,97 +139,95 @@ const PANORAMA_HTML = `<!DOCTYPE html>
 <title>Panorama Santa Cruz · Caleta Olivia Digital</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#F3F3F9; --paper:#FFFFFF; --line:#E1E1EE;
-    --text:#1B1A2E; --muted:#66647F;
-    --indigo:#312E81; --indigo-deep:#211F5B;
-    --blue:#4338CA; --blue-tint:rgba(67,56,202,0.08);
-    --accent:#D48A2C;
+    --indigo:#1D069A; --indigo-deep:#0B0442; --teal:#00B3B0;
+    --bg:#F8F7FC; --card:#FFFFFF; --ink:#14102B; --ink-soft:#57517A; --line:#E4E1F0;
   }
-  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
-  body{ background:var(--bg); color:var(--text); font-family:'Work Sans',sans-serif; min-height:100vh; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{ background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; line-height:1.5; min-height:100vh; }
   a{color:inherit;text-decoration:none;}
+  img{max-width:100%;display:block;}
+  .play-tri{ display:inline-block; width:0;height:0; border-top:5px solid transparent; border-bottom:5px solid transparent; border-left:8px solid var(--teal); margin-right:8px; flex-shrink:0; }
 
-  .topbar{ background:var(--indigo); border-bottom:3px solid var(--blue); }
-  .topbar-inner{ max-width:980px;margin:0 auto; display:flex;align-items:center;justify-content:space-between; gap:14px;flex-wrap:wrap; padding:9px 20px; }
-  .brand-mark{ display:flex;align-items:baseline;gap:16px;flex-wrap:wrap; }
-  .brand-mark .logo{ font-family:'Fraunces',serif; font-style:italic;font-weight:700; font-size:19px;color:#fff;letter-spacing:-0.01em; }
-  .brand-nav{ display:flex;gap:16px;font-size:13px; }
-  .brand-nav a{ color:rgba(255,255,255,0.6); padding:2px 0; }
-  .brand-nav a.active{ color:#fff;font-weight:500;border-bottom:2px solid var(--accent); }
-  .topbar-right{ display:flex;align-items:center;gap:12px; }
-  .clock{ font-family:'JetBrains Mono',monospace;font-size:11.5px;color:rgba(255,255,255,0.85); text-align:right;line-height:1.35; }
-  .clock strong{color:#fff;font-size:13px;}
+  header{ background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:50; }
+  .header-top{ max-width:1180px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; padding:14px 24px; gap:20px; }
+  .logo img{ height:52px; }
+  .clock{ font-size:13px; color:var(--ink-soft); white-space:nowrap; text-align:right; line-height:1.3; }
+  .clock strong{ font-family:'Space Grotesk',sans-serif; font-size:16px; color:var(--ink); }
+  .nav-cats{ max-width:1180px; margin:0 auto; padding:0 24px; display:flex; gap:2px; overflow-x:auto; border-top:1px solid var(--line); scrollbar-width:none; }
+  .nav-cats::-webkit-scrollbar{ display:none; }
+  .nav-cats a{ white-space:nowrap; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px; color:var(--ink-soft); padding:11px 14px; border-bottom:2px solid transparent; }
+  .nav-cats a:hover{ color:var(--indigo); }
+  .nav-cats a.activa{ color:var(--indigo); border-bottom-color:var(--indigo); }
 
-  header{ position:sticky;top:0;z-index:20; }
-  .filterbar{ background:var(--paper); border-bottom:1px solid var(--line); }
-  .toolbar-wrap{ max-width:980px;margin:0 auto; padding:8px 20px 8px; }
-  .toolbar{ display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
-  .toolbar.categories{ border-top:1px solid var(--line);margin-top:6px;padding-top:6px; }
-  .toolbar-label{ font-family:'JetBrains Mono',monospace; font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase; color:var(--muted);margin-right:4px; }
-  .pill{ font-weight:500; font-size:12px; padding:5px 12px; border-radius:999px; border:1px solid var(--line); background:var(--paper); color:var(--muted); cursor:pointer; transition:border-color .15s, color .15s, background .15s; white-space:nowrap; }
-  .pill .sw{ display:inline-block;width:6px;height:6px;border-radius:50%; margin-right:5px;vertical-align:middle; }
-  .pill:hover{color:var(--text);border-color:#c7c7db;}
+  .contenedor{ max-width:900px; margin:0 auto; padding:32px 24px 0; }
+  .titulo-pagina{ font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; display:flex; align-items:center; border-bottom:2px solid var(--indigo); padding-bottom:8px; margin-bottom:6px; }
+  .subtitulo{ font-size:14px; color:var(--ink-soft); margin-bottom:20px; }
+
+  .filterbar{ background:var(--card); border:1px solid var(--line); border-radius:4px; padding:14px 16px; margin-bottom:20px; }
+  .toolbar{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .toolbar.categories{ border-top:1px solid var(--line); margin-top:10px; padding-top:10px; }
+  .toolbar-label{ font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:var(--indigo); margin-right:6px; }
+  .pill{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:12px; padding:6px 13px; border-radius:20px; border:1px solid var(--line); background:var(--bg); color:var(--ink-soft); cursor:pointer; transition:all .15s; }
+  .pill .sw{ display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .pill:hover{ color:var(--indigo); border-color:var(--indigo); }
   .pill.active{ background:var(--indigo); border-color:var(--indigo); color:#fff; }
-  .toolbar-spacer{flex:1;}
-  #refresh-btn{ font-weight:600; font-size:12px; padding:5px 13px; border-radius:999px; border:1px solid var(--blue); background:transparent; color:var(--blue); cursor:pointer; }
-  #refresh-btn:hover{background:var(--blue-tint);}
-  #refresh-btn:disabled{opacity:.5;cursor:default;}
-  #last-update{ font-family:'JetBrains Mono',monospace; font-size:10.5px;color:var(--muted); margin-top:6px; }
+  .toolbar-spacer{ flex:1; }
+  #refresh-btn{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:12px; padding:6px 14px; border-radius:20px; border:none; background:var(--teal); color:#fff; cursor:pointer; }
+  #refresh-btn:disabled{ opacity:.5; cursor:default; }
+  #last-update{ font-size:12px; color:var(--ink-soft); margin-top:10px; }
 
-  main{max-width:980px;margin:0 auto;padding:14px 20px 80px;}
-  .item{ display:block; padding:14px 12px; margin-bottom:2px; border-radius:6px; border-bottom:1px solid var(--line); transition:background .15s; }
-  .item:hover{ background:var(--blue-tint); }
-  .item .meta{ display:flex;align-items:center;gap:9px;margin-bottom:5px;flex-wrap:wrap; }
-  .src-tag{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.05em; font-weight:600; color:var(--src-color); text-transform:uppercase; }
-  .cat-tag{ font-size:10px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--blue); background:var(--blue-tint); padding:2px 8px; border-radius:4px; }
-  .headline{ font-family:'Work Sans',sans-serif; font-weight:700; font-size:18px; line-height:1.32; color:var(--text); display:block; }
-  .headline:hover{color:var(--blue);text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:3px;}
-  .empty, .error-row{ font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted); padding:16px 4px; border-bottom:1px solid var(--line); line-height:1.6; }
-  .error-row a{color:var(--blue);}
-  footer{ max-width:980px;margin:0 auto;padding:0 20px 40px; font-family:'JetBrains Mono',monospace; font-size:10.5px;color:var(--muted); text-align:center; }
+  main{ max-width:900px; margin:0 auto; padding:0 24px 64px; }
+  #feed{ background:var(--card); border:1px solid var(--line); border-radius:4px; }
+  .item{ display:block; padding:16px 20px; border-bottom:1px solid var(--line); transition:background .15s; }
+  .item:last-child{ border-bottom:none; }
+  .item:hover{ background:#F3F1FC; }
+  .item .meta{ display:flex; align-items:center; gap:10px; margin-bottom:6px; flex-wrap:wrap; }
+  .src-tag{ font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; }
+  .cat-tag{ font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; color:var(--indigo); background:#EEECF9; padding:3px 9px; border-radius:3px; }
+  .headline{ font-family:'Source Serif 4',serif; font-weight:700; font-size:19px; line-height:1.3; color:var(--ink); display:block; }
+  .item:hover .headline{ color:var(--indigo); }
+  .empty, .error-row{ font-size:13px; color:var(--ink-soft); padding:18px 20px; line-height:1.6; }
+  .error-row{ border-top:1px solid var(--line); }
+  .error-row a{ color:var(--indigo); font-weight:600; }
+  footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:28px 24px; font-size:13px; text-align:center; }
 
   @media (max-width:560px){
-    .topbar-inner{padding:8px 14px;gap:8px;}
-    .brand-mark .logo{font-size:17px;}
-    .brand-nav{gap:12px;}
-    .clock{font-size:10px;text-align:left;}
-    .clock strong{font-size:12px;}
-    .toolbar-wrap{padding:7px 14px 7px;}
-    .pill{font-size:11px;padding:5px 10px;}
-    main{padding:10px 14px 60px;}
-    .headline{font-size:16.5px;}
-    footer{padding:0 14px 30px;}
+    .header-top{ padding:10px 14px; }
+    .logo img{ height:42px; }
+    .clock{ font-size:11px; }
+    .nav-cats{ padding:0 8px; }
+    .contenedor{ padding:20px 14px 0; }
+    main{ padding:0 14px 48px; }
+    .titulo-pagina{ font-size:20px; }
+    .headline{ font-size:17px; }
+    .item{ padding:14px 14px; }
   }
 </style>
 </head>
 <body>
 <header>
-  <div class="topbar">
-    <div class="topbar-inner">
-      <div class="brand-mark">
-        <span class="logo">Caleta Olivia Digital</span>
-        <nav class="brand-nav">
-          <a href="/">Portada</a>
-          <a href="/panoramasantacruz" class="active">Panorama Santa Cruz</a>
-        </nav>
-      </div>
-      <div class="topbar-right">
-        <div class="clock"><strong id="clock-time">--:--</strong><br><span id="clock-date">-- --- ----</span></div>
-      </div>
-    </div>
+  <div class="header-top">
+    <a href="/" class="logo"><img src="/logo.png" alt="Caleta Olivia Digital"></a>
+    <div class="clock"><strong id="clock-time">--:--</strong><br><span id="clock-date">-- --- ----</span></div>
   </div>
-  <div class="filterbar">
-    <div class="toolbar-wrap">
-      <div class="toolbar" id="toolbar-src"></div>
-      <div class="toolbar categories" id="toolbar-cat"></div>
-      <div id="last-update">Cargando titulares…</div>
-    </div>
-  </div>
+  <nav class="nav-cats" aria-label="Secciones">
+    <a href="/">Inicio</a>
+    <a href="/panoramasantacruz" class="activa">Panorama Santa Cruz</a>
+  </nav>
 </header>
-<main id="feed"></main>
+<div class="contenedor">
+  <h1 class="titulo-pagina"><span class="play-tri"></span>Panorama Santa Cruz</h1>
+  <p class="subtitulo">Los titulares de los diarios de la provincia, en un solo lugar.</p>
+  <div class="filterbar">
+    <div class="toolbar" id="toolbar-src"></div>
+    <div class="toolbar categories" id="toolbar-cat"></div>
+    <div id="last-update">Cargando titulares…</div>
+  </div>
+</div>
+<main id="feed-wrap"><div id="feed"></div></main>
 <footer>Fuentes: La Opinión Austral · Tiempo Sur · El Diario Nuevo Día · El Caletense — lee directo de portada, actualiza cada 10 min</footer>
 <script>
 const SOURCES = ${JSON.stringify(SOURCES)};
