@@ -174,6 +174,53 @@ article.nota-completa{
 }
 .nota-card h3{ font-family:'Source Serif 4',serif; font-size:15px; line-height:1.3; }
 
+/* --- encuesta --- */
+.encuesta-sticky{ position:sticky; top:16px; }
+.encuesta{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-top:4px solid var(--indigo);
+  border-radius:4px;
+  padding:20px;
+}
+.encuesta .enc-etiqueta{
+  display:flex; align-items:center;
+  font-family:'Space Grotesk',sans-serif;
+  font-weight:700; font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--indigo); margin-bottom:10px;
+}
+.encuesta .enc-pregunta{
+  font-family:'Source Serif 4',serif;
+  font-size:18px; line-height:1.3; font-weight:700; margin-bottom:16px;
+}
+.enc-opcion{
+  display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+  font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:500;
+  background:#fff; color:var(--ink);
+  border:1px solid var(--line); border-radius:4px;
+  padding:11px 14px; margin-bottom:8px; cursor:pointer;
+  transition:border-color .15s, background .15s;
+}
+.enc-opcion:hover{ border-color:var(--indigo); background:#F3F1FC; }
+.enc-resultado{
+  position:relative; overflow:hidden;
+  border:1px solid var(--line); border-radius:4px;
+  padding:10px 14px; margin-bottom:8px; background:#fff;
+  font-family:'Space Grotesk',sans-serif; font-size:14px;
+}
+.enc-resultado .enc-barra{
+  position:absolute; left:0; top:0; bottom:0;
+  background:#E4E0F7; z-index:0; transition:width .5s ease;
+}
+.enc-resultado.elegida .enc-barra{ background:#CFC8F2; }
+.enc-resultado .enc-fila{ position:relative; z-index:1; display:flex; align-items:center; gap:12px; }
+.enc-resultado .enc-nombre{ flex:1; }
+.enc-foto{ width:44px; height:44px; border-radius:50%; object-fit:cover; flex:none; background:#E4E0F7; }
+.enc-foto-ini{ display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14px; color:var(--indigo); }
+.enc-resultado .enc-pct{ font-weight:700; }
+.encuesta .enc-pie{ font-family:'Space Grotesk',sans-serif; font-size:12px; color:var(--ink-soft); margin-top:12px; }
+.encuesta .enc-ver{ background:none; border:0; padding:0; font:inherit; color:var(--indigo); cursor:pointer; text-decoration:underline; }
+
 .sidebar{ display:flex; flex-direction:column; gap:24px; }
 .facebook-box{
   background:linear-gradient(150deg, var(--indigo) 0%, var(--indigo-deep) 100%);
@@ -317,6 +364,8 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
       <span>Espacio publicitario</span>
       300x600
     </div>
+
+    <div class="encuesta-sticky"><div id="encuesta-box" style="display:none;"></div></div>
   </aside>
 </main>
 
@@ -334,6 +383,56 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
   const SUPABASE_URL = 'https://rmbutukkldktjknvhizj.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_HJbQIiqaB6MGWnfTq0GlHw_dDO7tbAe';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  /* ---------- ENCUESTA ---------- */
+  async function cargarEncuesta(){
+    const box = document.getElementById('encuesta-box');
+    if(!box) return;
+    try{
+      const { data: enc, error: errEnc } = await sb.from('encuestas').select('id,pregunta').eq('activa', true).order('creada', { ascending:false }).limit(1).maybeSingle();
+      if(errEnc) console.error('Encuesta:', errEnc);
+      if(!enc){ box.style.display = 'none'; return; }
+      const { data: ops } = await sb.from('encuesta_opciones').select('id,texto,votos,orden,foto').eq('encuesta_id', enc.id).order('orden');
+      if(!ops || !ops.length){ box.style.display = 'none'; return; }
+      box.style.display = '';
+      const key = 'voto_enc_' + enc.id;
+      let miVoto = null;
+      try{ miVoto = localStorage.getItem(key); }catch(e){}
+      let verResultados = !!miVoto;
+      const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const iniciales = t => String(t).replace(/\(.*?\)/g,'').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+      const avatar = o => o.foto ? '<img class="enc-foto" src="'+esc(o.foto)+'" alt="">' : '<span class="enc-foto enc-foto-ini">'+esc(iniciales(o.texto))+'</span>';
+
+      function pintar(){
+        const total = ops.reduce((s,o)=> s + (o.votos||0), 0);
+        let h = '<div class="enc-etiqueta"><span class="play-tri"></span>Encuesta</div><div class="enc-pregunta">'+esc(enc.pregunta)+'</div>';
+        if(!verResultados){
+          h += ops.map(o => '<button type="button" class="enc-opcion" data-id="'+o.id+'">'+avatar(o)+'<span>'+esc(o.texto)+'</span></button>').join('');
+          h += '<div class="enc-pie"><button type="button" class="enc-ver" id="enc-ver">Ver resultados</button></div>';
+        } else {
+          h += ops.map(o => {
+            const pct = total ? Math.round((o.votos||0)*100/total) : 0;
+            return '<div class="enc-resultado'+(String(o.id)===String(miVoto)?' elegida':'')+'"><div class="enc-barra" style="width:'+pct+'%"></div><div class="enc-fila">'+avatar(o)+'<span class="enc-nombre">'+esc(o.texto)+'</span><span class="enc-pct">'+pct+'%</span></div></div>';
+          }).join('');
+          h += '<div class="enc-pie">'+total+' voto'+(total===1?'':'s')+(miVoto?' · ¡Gracias por votar!':'')+'</div>';
+        }
+        box.innerHTML = '<div class="encuesta">'+h+'</div>';
+        box.querySelectorAll('.enc-opcion').forEach(b => b.addEventListener('click', async () => {
+          const id = b.dataset.id;
+          b.disabled = true;
+          const { error } = await sb.rpc('votar_encuesta', { opcion: id });
+          if(error){ b.disabled = false; return; }
+          const o = ops.find(x => String(x.id) === String(id)); if(o) o.votos = (o.votos||0) + 1;
+          miVoto = id; try{ localStorage.setItem(key, id); }catch(e){}
+          verResultados = true; pintar();
+        }));
+        const ver = box.querySelector('#enc-ver');
+        if(ver) ver.addEventListener('click', () => { verResultados = true; pintar(); });
+      }
+      pintar();
+    }catch(e){ console.error('Encuesta:', e); box.style.display = 'none'; }
+  }
+  cargarEncuesta();
 
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
