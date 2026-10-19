@@ -595,6 +595,7 @@ footer{
     <button type="button" data-cat="policiales">Policiales</button>
     <button type="button" data-cat="economia">Economía</button>
     <button type="button" data-cat="sociedad">Sociedad</button>
+    <button type="button" data-cat="ultimas">Últimas noticias</button>
     <button type="button" data-cat="mas" id="nav-mas" class="oculto">Más noticias</button>
     <a href="/panoramasantacruz">Panorama Santa Cruz</a>
   </nav>
@@ -797,7 +798,7 @@ footer{
   document.getElementById('anio').textContent = hoy.getFullYear();
 
   const NOMBRES_CAT = {
-    todas: 'Más noticias', politica: 'Política', sociedad: 'Sociedad',
+    todas: 'Más noticias', ultimas: 'Últimas noticias', politica: 'Política', sociedad: 'Sociedad',
     economia: 'Economía', deportes: 'Deportes', cultura: 'Cultura', policiales: 'Policiales'
   };
   function categoriaKey(nombre){
@@ -1068,8 +1069,10 @@ async function cargarPortada(){
     let visibles = 0;
     if(filtroActivo){
       // en modo filtro/búsqueda se muestran TODAS las notas publicadas (incluidas las destacadas y las de los bloques)
-      const resultado = TODAS_LAS_NOTAS.filter(n => {
-        const matchCat = (catActiva === 'todas') || (categoriaKey(n.categoria) === catActiva);
+      // "Últimas noticias": las 15 más recientes publicadas, de cualquier categoría (TODAS_LAS_NOTAS ya viene ordenada por fecha de carga)
+      const base = (catActiva === 'ultimas') ? TODAS_LAS_NOTAS.slice(0, 15) : TODAS_LAS_NOTAS;
+      const resultado = base.filter(n => {
+        const matchCat = (catActiva === 'todas') || (catActiva === 'ultimas') || (categoriaKey(n.categoria) === catActiva);
         const matchTexto = !hayTexto || normalizar(n.titulo).includes(normalizar(textoBusqueda));
         return matchCat && matchTexto;
       });
