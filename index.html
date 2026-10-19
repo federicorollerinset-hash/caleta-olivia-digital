@@ -1155,7 +1155,16 @@ async function cargarPortada(){
     renderGrilla();
   });
 
-  cargarPortada();
+  // si se llega desde una nota con /?cat=politica (o ultimas, mas, etc.), abre esa sección
+  cargarPortada().then(() => {
+    const cat = new URLSearchParams(location.search).get('cat');
+    if(!cat) return;
+    if(cat === 'mas'){
+      masSection.scrollIntoView({block:'start'});
+    } else if(NOMBRES_CAT[cat] && cat !== 'todas'){
+      aplicarFiltro(cat);
+    }
+  });
 </script>
 
 </body>

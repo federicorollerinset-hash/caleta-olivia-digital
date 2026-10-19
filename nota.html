@@ -37,6 +37,23 @@ header{ background:var(--card); border-bottom:1px solid var(--line); position:st
 .logo img{ height:38px; }
 .fecha-hoy{ font-size:13px; color:var(--ink-soft); white-space:nowrap; }
 
+/* --- navegación por secciones --- */
+.nav-cats{
+  max-width:1180px; margin:0 auto; padding:0 24px;
+  display:flex; gap:2px; overflow-x:auto;
+  border-top:1px solid var(--line);
+  scrollbar-width:none;
+}
+.nav-cats::-webkit-scrollbar{ display:none; }
+.nav-cats a{
+  white-space:nowrap;
+  font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px;
+  color:var(--ink-soft);
+  padding:11px 14px;
+  border-bottom:2px solid transparent;
+}
+.nav-cats a:hover{ color:var(--indigo); }
+
 main{
   max-width:1180px; margin:0 auto; padding:32px 24px 64px;
   display:grid; grid-template-columns: 1fr 300px; gap:36px;
@@ -317,6 +334,7 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
   .nota-card h3{ font-size:17px; }
   .cuerpo-nota{ font-size:18.5px; }
   .header-top{ flex-direction:column; align-items:flex-start; gap:6px; }
+  .nav-cats{ padding:0 12px; }
 }
 </style>
 </head>
@@ -332,6 +350,16 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
       <div class="fecha-hoy" id="fecha-hoy"></div>
     </div>
   </div>
+  <nav class="nav-cats" id="nav-cats" aria-label="Secciones">
+    <a href="/">Inicio</a>
+    <a href="/?cat=politica">Política</a>
+    <a href="/?cat=policiales">Policiales</a>
+    <a href="/?cat=economia">Economía</a>
+    <a href="/?cat=sociedad">Sociedad</a>
+    <a href="/?cat=ultimas">Últimas noticias</a>
+    <a href="/?cat=mas">Más noticias</a>
+    <a href="/panoramasantacruz">Panorama Santa Cruz</a>
+  </nav>
 </header>
 
 <main>
