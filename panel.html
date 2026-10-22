@@ -388,6 +388,8 @@ button, input, select, textarea{ font-family:inherit; }
                 <option value="principal">Nota principal (grande)</option>
                 <option value="secundaria1">Nota destacada 2</option>
                 <option value="secundaria2">Nota destacada 3</option>
+                <option value="secundaria3">Nota destacada 4 (chica)</option>
+                <option value="secundaria4">Nota destacada 5 (chica)</option>
               </select>
             </div>
           </div>
@@ -1056,7 +1058,7 @@ function etiquetasHtml(etiquetas){
   if(!etiquetas || etiquetas.length === 0) return '';
   return '<div style="margin-top:6px;">' + etiquetas.map(t => `<span class="etiqueta-badge">${t}</span>`).join('') + '</div>';
 }
-const NOMBRES_POSICION = { principal:'Principal', secundaria1:'Destacada 2', secundaria2:'Destacada 3', regular:'Regular' };
+const NOMBRES_POSICION = { principal:'Principal', secundaria1:'Destacada 2', secundaria2:'Destacada 3', secundaria3:'Destacada 4', secundaria4:'Destacada 5', regular:'Regular' };
 
 async function cargarMisNotas(){
   const cont = document.getElementById('lista-mis-notas');
@@ -1097,6 +1099,8 @@ async function cargarPublicadas(){
         <option value="principal" ${n.posicion === 'principal' ? 'selected' : ''}>Nota principal</option>
         <option value="secundaria1" ${n.posicion === 'secundaria1' ? 'selected' : ''}>Destacada 2</option>
         <option value="secundaria2" ${n.posicion === 'secundaria2' ? 'selected' : ''}>Destacada 3</option>
+        <option value="secundaria3" ${n.posicion === 'secundaria3' ? 'selected' : ''}>Destacada 4</option>
+        <option value="secundaria4" ${n.posicion === 'secundaria4' ? 'selected' : ''}>Destacada 5</option>
       </select>
       <div class="acciones-fila">
         <button class="btn-editar" onclick="editarNota('${n.id}')">Editar</button>
