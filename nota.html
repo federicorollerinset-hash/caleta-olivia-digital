@@ -323,6 +323,20 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
 
 @media (max-width: 860px){
   main{ grid-template-columns:1fr; }
+  /* celular: la encuesta va justo debajo del texto de la nota */
+  main{ gap:0; }
+  .columna-principal, .sidebar{ display:contents; }
+  .columna-principal > .migas{ order:1; }
+  .columna-principal > .nota-completa{ order:2; }
+  #nota-no-encontrada{ order:3; }
+  .encuesta-sticky{ order:4; position:static; margin-top:28px; }
+  .columna-principal > .ad-slot{ order:5; }
+  #titulo-relacionadas{ order:6; }
+  #grilla-relacionadas{ order:7; }
+  .sidebar > .facebook-box{ order:8; margin-top:28px; }
+  .sidebar > .ad-slot:nth-of-type(1){ order:9; margin-top:24px; }
+  .sidebar > .mas-leidas{ order:10; margin-top:24px; }
+  .sidebar > .ad-slot:nth-of-type(3){ order:11; margin-top:24px; }
   .grilla-relacionadas{ grid-template-columns:1fr 1fr; }
   .nota-completa h1{ font-size:27px; }
   .img-portada-nota{ height:260px; margin:20px 18px 0; }
