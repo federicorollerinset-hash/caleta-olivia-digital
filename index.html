@@ -444,12 +444,19 @@ footer{
   main{ grid-template-columns:1fr; }
   .grilla-notas{ grid-template-columns:1fr 1fr; }
 }
+/* celular: el título de la principal va debajo de la foto, sin taparla */
+@media (max-width: 700px){
+  .hero-texto{ position:static; background:var(--card); color:var(--ink); padding:16px; }
+  .hero-texto .eyebrow{ color:var(--indigo); }
+  .hero-texto h1{ font-size:23px; }
+  .hero-texto h1 a{ color:var(--ink); }
+  .hero-texto p{ color:var(--ink-soft); -webkit-line-clamp:3; }
+  .hero-texto .meta{ color:var(--ink-soft); }
+  .hero-texto .meta .punto{ background:var(--ink-soft); }
+}
 @media (max-width: 560px){
   .grilla-notas{ grid-template-columns:1fr; }
   .hero-fila{ grid-template-columns:1fr; }
-  .hero-texto{ padding:40px 16px 16px; }
-  .hero-texto h1{ font-size:21px; }
-  .hero-texto p{ display:none; }
   .nota-card .img{ height:220px; }
   .nota-card h3{ font-size:18px; }
   .nota-card .cuerpo{ padding:16px; }
