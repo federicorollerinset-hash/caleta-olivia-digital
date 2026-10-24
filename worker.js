@@ -131,6 +131,56 @@ async function handlePanoramaApi(request, ctx){
   });
 }
 
+// ============================================================
+// Panorama renderizado en el servidor: los titulares viajan ya dentro del
+// HTML (con caché de 5 min), así Google los lee sin esperar al JavaScript.
+// El script de la página los reemplaza apenas carga la versión en vivo.
+// ============================================================
+function escHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function filasPanoramaSSR(items) {
+  const srcById = Object.fromEntries(SOURCES.map(s => [s.id, s]));
+  const catLabel = id => (CATEGORIES.find(c => c.id === id) || {}).label || id;
+  return items.slice(0, 60).map(item => {
+    const src = srcById[item.sourceId] || { short: '', color: '#57517A' };
+    return '<a class="item" href="' + escHtml(item.link) + '" target="_blank" rel="noopener">' +
+      '<div class="meta"><span class="src-tag" style="color:' + src.color + '">' + src.short + '</span>' +
+      '<span class="cat-tag">' + escHtml(catLabel(item.category)) + '</span></div>' +
+      '<span class="headline">' + escHtml(item.title) + '</span></a>';
+  }).join('');
+}
+
+async function handlePanoramaPagina(request, ctx) {
+  const cache = caches.default;
+  const cacheKey = new Request(new URL(request.url).origin + '/__panorama_html');
+  const guardado = await cache.match(cacheKey);
+  if (guardado) return guardado;
+
+  let filas = '';
+  try {
+    const limite = new Promise(resolve => setTimeout(() => resolve(null), 6000));
+    const cargar = (async () => {
+      const results = await Promise.all(SOURCES.map(async s => ({ source: s, ...(await getSourceItems(s)) })));
+      return results.flatMap(r => r.ok ? r.items : []);
+    })();
+    const items = await Promise.race([cargar, limite]);
+    if (items && items.length) filas = filasPanoramaSSR(items);
+  } catch (e) {}
+
+  const respaldo = '<div class="empty">Panorama Santa Cruz reúne los titulares de los principales medios de la provincia. ' +
+    'Mientras se actualizan, podés entrar directo a ' +
+    SOURCES.map(s => '<a href="' + s.site + '" target="_blank" rel="noopener">' + s.name + '</a>').join(', ') + '.</div>';
+
+  const html = PANORAMA_HTML.replace('<div id="feed"></div>', () => '<div id="feed">' + (filas || respaldo) + '</div>');
+  const resp = new Response(html, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' }
+  });
+  if (filas) ctx.waitUntil(cache.put(cacheKey, resp.clone()));
+  return resp;
+}
+
 const PANORAMA_HTML = `<!DOCTYPE html>
 <html lang="es-AR">
 <head>
@@ -1062,7 +1112,7 @@ export default {
     }
 
     if (url.pathname === '/panoramasantacruz') {
-      return new Response(PANORAMA_HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+      return handlePanoramaPagina(request, ctx);
     }
 
     if (url.pathname === '/api/panorama-noticias') {
