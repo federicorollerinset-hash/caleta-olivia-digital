@@ -101,11 +101,29 @@ function extractHeadlines(html, source){
   return items;
 }
 
+// Lee el HTML respetando la codificación real del sitio (algunos diarios usan
+// ISO-8859-1 y con res.text() las tildes y las ñ salían como "�").
+async function leerHtml(res){
+  const buf = await res.arrayBuffer();
+  const ct = res.headers.get('content-type') || '';
+  let cs = (ct.match(/charset=([\w-]+)/i) || [])[1];
+  if (!cs) {
+    const cabeza = new TextDecoder('latin1').decode(buf.slice(0, 3000));
+    cs = (cabeza.match(/charset=["']?([\w-]+)/i) || [])[1];
+  }
+  if (!cs) {
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+    catch (e) { return new TextDecoder('windows-1252').decode(buf); }
+  }
+  try { return new TextDecoder(cs.toLowerCase()).decode(buf); }
+  catch (e) { return new TextDecoder('utf-8').decode(buf); }
+}
+
 async function getSourceItems(source){
   try{
     const res = await fetch(source.site, { headers: { 'User-Agent': UA } });
     if (!res.ok) return { ok:false, error: `HTTP ${res.status} al pedir la portada` };
-    const html = await res.text();
+    const html = await leerHtml(res);
     const items = extractHeadlines(html, source);
     if (items.length === 0) return { ok:false, error: `portada leída (${html.length}b) pero sin titulares detectados` };
     return { ok:true, items: items.map(i => ({ ...i, sourceId: source.id })) };
