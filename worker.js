@@ -136,7 +136,10 @@ const PANORAMA_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Panorama Santa Cruz · Caleta Olivia Digital</title>
+<title>Panorama Santa Cruz: portadas de los medios de la provincia · Caleta Olivia Digital</title>
+<meta name="description" content="Sección de Caleta Olivia Digital, diario digital de Caleta Olivia. Un panorama con las últimas noticias que publican los medios de Santa Cruz, con enlace a cada nota original.">
+<link rel="canonical" href="https://caletaoliviadigital.com.ar/panoramasantacruz">
+<meta name="robots" content="index,follow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
