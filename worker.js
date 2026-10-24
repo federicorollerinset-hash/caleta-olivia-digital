@@ -581,13 +581,16 @@ function armarMetaNota(nota, url) {
 <meta property="article:published_time" content="${escapeAttr(publicada || '')}">
 <meta property="article:modified_time" content="${escapeAttr(modificada || '')}">
 <meta property="article:section" content="${escapeAttr(nota.categoria || '')}">
-<meta name="twitter:card" content="${nota.imagen_url ? 'summary_large_image' : 'summary'}">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${titulo}">
 <meta name="twitter:description" content="${descripcion}">
 `;
   if (nota.imagen_url) {
     const imagen = escapeAttr(nota.imagen_url);
     tags += `<meta property="og:image" content="${imagen}">\n<meta name="twitter:image" content="${imagen}">\n`;
+    } else {
+    const fallback = `${url.origin}/og-image.png`;
+    tags += `<meta property="og:image" content="${fallback}">\n<meta name="twitter:image" content="${fallback}">\n`;
   }
 
   const esRedaccion = !nota.autor_nombre || /^redacci[oó]n$/i.test(nota.autor_nombre.trim());
