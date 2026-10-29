@@ -320,6 +320,13 @@ const PANORAMA_HTML = `<!DOCTYPE html>
     .headline{ font-size:17px; }
     .item{ padding:14px 14px; }
   }
+
+  /* menú de secciones azul */
+  .nav-bar{ background:var(--indigo); }
+  .nav-cats{ border-top:none; }
+  .nav-cats a{ color:#fff; border-bottom:3px solid transparent; transition:background .15s; }
+  .nav-cats a:hover{ color:#fff; background:rgba(255,255,255,.14); }
+  .nav-cats a.activa{ color:#fff; border-bottom-color:#fff; }
 </style>
 </head>
 <body>
@@ -336,10 +343,12 @@ const PANORAMA_HTML = `<!DOCTYPE html>
       <div class="fecha-hoy" id="clock-date"></div>
     </div>
   </div>
+  <div class="nav-bar">
   <nav class="nav-cats" aria-label="Secciones">
     <a href="/">Inicio</a>
     <a href="/panoramasantacruz" class="activa">Panorama Santa Cruz</a>
   </nav>
+  </div>
 </header>
 <div class="contenedor">
   <h1 class="titulo-pagina"><span class="play-tri"></span>Panorama Santa Cruz</h1>
