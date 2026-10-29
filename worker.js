@@ -1046,7 +1046,23 @@ async function handleApi(request, env, url) {
     if (!filas[0]) return jsonResponse({ ok: false }, 404);
     const nuevasVistas = (filas[0].vistas || 0) + 1;
     await sbService(env, `notas?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ vistas: nuevasVistas }), prefer: 'return=minimal' });
+    // registro por día para las estadísticas de visitas (si falla, no afecta el contador de la nota)
+    try {
+      await sbService(env, 'rpc/sumar_vista_dia', { method: 'POST', body: JSON.stringify({ p_nota: String(id) }), prefer: 'return=minimal' });
+    } catch (e) { console.error('sumar_vista_dia:', e); }
     return jsonResponse({ ok: true });
+  }
+
+  // ---------- VISITAS POR DÍA (admin y editor) — el panel las agrupa por semana y por mes ----------
+  if (pathname === '/api/estadisticas/visitas' && metodo === 'GET') {
+    const sesion = await requireSesion(request, env);
+    if (!sesion) return jsonResponse({ error: 'No autorizado.' }, 401);
+    if (sesion.rol === 'redactor') return jsonResponse({ error: 'No autorizado.' }, 403);
+    const dias = Math.min(Math.max(parseInt(url.searchParams.get('dias') || '365', 10) || 365, 1), 730);
+    const desde = new Date(Date.now() - dias * 86400000).toISOString().slice(0, 10);
+    const res = await sbService(env, 'rpc/vistas_por_dia', { method: 'POST', body: JSON.stringify({ p_desde: desde }) });
+    if (!res.ok) return jsonResponse({ error: 'No se pudieron leer las visitas.' }, 500);
+    return jsonResponse({ ok: true, dias: await res.json() });
   }
 
   // ---------- USUARIOS (solo admin) ----------
