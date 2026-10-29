@@ -635,6 +635,21 @@ footer{
   }
   .nav-cats button.activa{ color:var(--indigo); }
 }
+
+/* --- menú de secciones azul --- */
+.nav-bar{ background:var(--indigo); }
+.nav-cats{ border-top:none; }
+.nav-cats button, .nav-cats a{ color:#fff; transition:background .15s; }
+.nav-cats button:hover, .nav-cats a:hover{ color:#fff; background:rgba(255,255,255,.14); }
+.nav-cats button.activa, .nav-cats a.activa{ color:#fff; }
+@media (min-width:701px){
+  .nav-cats button, .nav-cats a{ border-bottom:3px solid transparent; }
+  .nav-cats button.activa, .nav-cats a.activa{ border-bottom-color:#fff; }
+}
+@media (max-width:700px){
+  .nav-cats button, .nav-cats a{ border-bottom:1px solid rgba(255,255,255,.18); }
+  .nav-cats button.activa, .nav-cats a.activa{ background:rgba(255,255,255,.12); }
+}
 </style>
 </head>
 <body>
@@ -655,6 +670,7 @@ footer{
       <div class="fecha-hoy" id="fecha-hoy"></div>
     </div>
   </div>
+  <div class="nav-bar">
   <nav class="nav-cats" id="nav-cats" aria-label="Secciones">
     <button type="button" data-cat="todas" class="activa">Inicio</button>
     <button type="button" data-cat="politica">Política</button>
@@ -665,6 +681,7 @@ footer{
     <button type="button" data-cat="mas" id="nav-mas" class="oculto">Más noticias</button>
     <a href="/panoramasantacruz">Panorama Santa Cruz</a>
   </nav>
+  </div>
 </header>
 
 <main>
