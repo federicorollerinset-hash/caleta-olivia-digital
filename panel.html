@@ -255,6 +255,56 @@ button, input, select, textarea{ font-family:inherit; }
 .vis-nota{ font-size:12px; color:var(--ink-soft); margin-top:14px; }
 .vis-vacio{ padding:20px; color:var(--ink-soft); font-size:13px; }
 
+
+/* --- editor de nota tipo Word --- */
+.editor-wrap{ border:1px solid var(--line); border-radius:6px; background:#fff; }
+.ed-barra{
+  position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; align-items:center; gap:6px;
+  padding:8px 10px; background:#F8F7FC; border-bottom:1px solid var(--line); border-radius:6px 6px 0 0;
+}
+.ed-btn{
+  min-width:34px; height:34px; padding:0 11px; background:#fff; border:1px solid var(--line); border-radius:4px;
+  font-size:13px; font-weight:600; cursor:pointer; color:var(--ink);
+  display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap;
+}
+.ed-btn:hover{ background:var(--bg); border-color:#c7c1e3; }
+.ed-btn.ed-resaltar{ background:#FFF3A0; border-color:#EAD97A; }
+.ed-btn.ed-resaltar:hover{ background:#FCEB6E; }
+.ed-sep{ width:1px; height:22px; background:var(--line); margin:0 4px; }
+.ed-etq{ font-size:11px; color:var(--ink-soft); }
+#f-cuerpo-ed{
+  min-height:560px; padding:24px 30px; outline:none; overflow:auto; resize:vertical;
+  font-family:'Source Serif 4',Georgia,serif; font-size:18px; line-height:1.7; color:var(--ink);
+}
+#f-cuerpo-ed p{ margin:0 0 14px; min-height:1.7em; }
+#f-cuerpo-ed mark{ background:#FFF3A0; color:inherit; padding:0 2px; border-radius:2px; }
+#f-cuerpo-ed a{ color:var(--indigo); font-weight:600; text-decoration:underline; text-decoration-color:var(--teal); text-underline-offset:2px; cursor:text; }
+#f-cuerpo-ed.vacio > p:first-child::before{ content:'Escribí o pegá el texto de la nota acá…'; color:#A9A4C4; pointer-events:none; }
+.ed-embed{
+  position:relative; margin:18px 0; border:1px solid var(--line); border-radius:6px;
+  background:#F3F2FA; overflow:hidden; user-select:none;
+}
+.ed-embed img{ width:100%; display:block; max-height:360px; object-fit:cover; }
+.ed-embed-tipo{ padding:16px 18px; font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:var(--indigo); }
+.ed-embed-tipo span{ font-weight:400; color:var(--ink-soft); font-size:12px; word-break:break-all; }
+.ed-embed-epi{ padding:8px 16px 12px; font-family:'Inter',sans-serif; font-size:13px; font-style:italic; color:var(--ink-soft); }
+.ed-embed-acc{ position:absolute; top:8px; right:8px; display:flex; gap:6px; z-index:2; }
+.ed-embed-acc button{
+  padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; color:var(--ink);
+  background:rgba(255,255,255,.95); border:1px solid var(--line); border-radius:4px;
+}
+.ed-embed-acc button:hover{ background:#fff; border-color:var(--indigo); color:var(--indigo); }
+
+/* --- pestañas de estadísticas --- */
+.est-tabs{ display:flex; gap:6px; margin:0 0 22px; border-bottom:1px solid var(--line); }
+.est-tabs button{
+  padding:11px 18px; font-size:14px; font-weight:600; cursor:pointer; background:none; border:none;
+  border-bottom:3px solid transparent; margin-bottom:-1px; color:var(--ink-soft);
+}
+.est-tabs button:hover{ color:var(--indigo); }
+.est-tabs button.activa{ color:var(--indigo); border-bottom-color:var(--indigo); }
+.est-sub{ font-size:13px; color:var(--ink-soft); margin:-6px 0 16px; }
+
 .btn-hamburguesa{
   display:none; background:none; border:none; cursor:pointer;
   padding:6px; margin-right:10px; flex-shrink:0;
@@ -394,21 +444,26 @@ button, input, select, textarea{ font-family:inherit; }
           </div>
           <div class="campo">
             <label>Cuerpo de la nota</label>
-            <div class="barra-formato">
-              <span class="barra-formato-label">Formato</span>
-              <button type="button" class="btn-formato formato-negrita" onclick="formatearSeleccion('b')" title="Negrita">N</button>
-              <button type="button" class="btn-formato formato-subrayado" onclick="formatearSeleccion('u')" title="Subrayado">S</button>
-              <button type="button" class="btn-formato formato-resaltado" onclick="formatearSeleccion('mark')" title="Resaltar en amarillo">🖍️</button>
+            <div class="editor-wrap">
+              <div class="ed-barra" onmousedown="if(event.target.closest('button')) event.preventDefault();">
+                <button type="button" class="ed-btn" onclick="edCmd('undo')" title="Deshacer (Ctrl+Z)">↶</button>
+                <button type="button" class="ed-btn" onclick="edCmd('redo')" title="Rehacer (Ctrl+Y)">↷</button>
+                <span class="ed-sep"></span>
+                <button type="button" class="ed-btn" style="font-weight:700;" onclick="edCmd('bold')" title="Negrita (Ctrl+B)">N</button>
+                <button type="button" class="ed-btn" style="text-decoration:underline;" onclick="edCmd('underline')" title="Subrayado (Ctrl+U)">S</button>
+                <button type="button" class="ed-btn ed-resaltar" onclick="edResaltar()" title="Resaltar en amarillo">🖍️ Resaltar</button>
+                <button type="button" class="ed-btn" onclick="edLink()" title="Convertir en link">🔗 Link</button>
+                <button type="button" class="ed-btn" onclick="edQuitarFormato()" title="Quitar formato y links del texto seleccionado">Quitar formato</button>
+                <span class="ed-sep"></span>
+                <span class="ed-etq">Insertar:</span>
+                <button type="button" class="ed-btn" onclick="insertarEmbed('img')">🖼️ Imagen</button>
+                <button type="button" class="ed-btn" onclick="insertarEmbed('yt')">▶️ YouTube</button>
+                <button type="button" class="ed-btn" onclick="insertarEmbed('fb')">📘 Facebook</button>
+                <button type="button" class="ed-btn" onclick="insertarEmbed('tw')">🐦 Twitter/X</button>
+              </div>
+              <div id="f-cuerpo-ed" contenteditable="true" spellcheck="true" class="vacio"></div>
             </div>
-            <div class="barra-embeds">
-              <button type="button" class="btn-embed" onclick="insertarEmbed('fb')">📘 Facebook</button>
-              <button type="button" class="btn-embed" onclick="insertarEmbed('yt')">▶️ YouTube</button>
-              <button type="button" class="btn-embed" onclick="insertarEmbed('tw')">🐦 Twitter/X</button>
-              <button type="button" class="btn-embed" onclick="insertarEmbed('img')">🖼️ Subir imagen</button>
-              <button type="button" class="btn-embed" onclick="insertarLink()">🔗 Link</button>
-            </div>
-            <textarea id="f-cuerpo" placeholder="Escribí el contenido completo acá..."></textarea>
-            <div class="ayuda-embeds">Para dar formato, seleccioná el texto y usá <strong>N</strong> (negrita), <strong><u>S</u></strong> (subrayado) o 🖍️ (resaltar en amarillo). Para incrustar un posteo, video o imagen, ubicá el cursor donde querés que aparezca y usá los botones de la fila de abajo. Con "Subir imagen" elegís el archivo desde tu compu, igual que con la imagen principal. Se va a insertar un renglón como <code>[yt]URL|Epígrafe[/yt]</code> — dejalo en su propio renglón, con líneas en blanco antes y después. Para citar una nota o fuente dentro de una oración, seleccioná la palabra que querés convertir en link (opcional) y usá el botón <code>Link</code> — se inserta como <code>[link]URL|Texto[/link]</code> directo donde esté el cursor, sin renglones en blanco.</div>
+            <div class="ayuda-embeds">Escribí como en Word: seleccioná el texto y usá la barra de arriba para negrita, subrayado, resaltado o link. Para agregar una imagen, video o posteo, poné el cursor donde querés y tocá uno de los botones de <b>Insertar</b>. Al pegar texto de otro lado entra sin formato, así no se cuela la letra o los colores de la fuente.</div>
           </div>
           <div class="fila">
             <div class="campo">
@@ -452,25 +507,36 @@ button, input, select, textarea{ font-family:inherit; }
 
       <!-- ESTADÍSTICAS (admin/editor) -->
       <section class="vista" id="v-estadisticas">
-        <h2>Estadísticas de lectura</h2>
-        <p class="subt">Vistas acumuladas de las notas publicadas en el sitio.</p>
-        <div class="vis-box">
-          <div class="vis-cab">
-            <h3>Visitas al sitio</h3>
-            <div class="vis-tabs" id="vis-tabs">
-              <button type="button" data-tab="dias" class="activa" onclick="cambiarVisTab('dias')">Días</button>
-              <button type="button" data-tab="semanas" onclick="cambiarVisTab('semanas')">Semanas</button>
-              <button type="button" data-tab="meses" onclick="cambiarVisTab('meses')">Meses</button>
+        <h2>Estadísticas</h2>
+        <div class="est-tabs" id="est-tabs">
+          <button type="button" data-est="visitas" class="activa" onclick="cambiarEstTab('visitas')">📈 Visitas al sitio</button>
+          <button type="button" data-est="lecturas" onclick="cambiarEstTab('lecturas')">📖 Lecturas por nota</button>
+        </div>
+
+        <div id="est-visitas">
+          <p class="est-sub">Cuánta gente entra al sitio, día por día (cada vez que se abre una nota).</p>
+          <div class="vis-box">
+            <div class="vis-cab">
+              <h3>Visitas al sitio</h3>
+              <div class="vis-tabs" id="vis-tabs">
+                <button type="button" data-tab="dias" class="activa" onclick="cambiarVisTab('dias')">Días</button>
+                <button type="button" data-tab="semanas" onclick="cambiarVisTab('semanas')">Semanas</button>
+                <button type="button" data-tab="meses" onclick="cambiarVisTab('meses')">Meses</button>
+              </div>
             </div>
+            <div id="vis-grafico"><div class="vis-vacio">Cargando...</div></div>
           </div>
-          <div id="vis-grafico"><div class="vis-vacio">Cargando...</div></div>
         </div>
-        <div class="tarjetas-stats" id="stats-lecturas"></div>
-        <div class="buscador-stats">
-          <input type="search" id="buscar-stats" placeholder="Buscar nota por título, categoría o autor..." autocomplete="off">
-          <span id="buscar-stats-cont"></span>
+
+        <div id="est-lecturas" style="display:none;">
+          <p class="est-sub">Cuántas veces se leyó cada nota publicada, acumulado desde que salió.</p>
+          <div class="tarjetas-stats" id="stats-lecturas"></div>
+          <div class="buscador-stats">
+            <input type="search" id="buscar-stats" placeholder="Buscar nota por título, categoría o autor..." autocomplete="off">
+            <span id="buscar-stats-cont"></span>
+          </div>
+          <div class="tabla-notas" id="ranking-lecturas"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
         </div>
-        <div class="tabla-notas" id="ranking-lecturas"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
       </section>
 
       <!-- ENCUESTAS (admin/editor) -->
@@ -558,10 +624,179 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let usuarioActual = null; // { id, nombre, email, rol }
 
-// Inserta un renglón [tipo]URL|Epígrafe[/tipo] en el cursor del textarea de cuerpo.
+// ============================================================
+// EDITOR DE NOTA (tipo Word)
+// Se escribe y se ve con el formato final. Por debajo, al guardar, se
+// convierte al mismo formato de siempre (con [b], [u], [mark], [link],
+// [yt], [fb], [tw], [img]) para que la portada y las notas viejas
+// sigan funcionando igual.
+// ============================================================
+const ED_ID = 'f-cuerpo-ed';
+let _edRango = null;
+function edEl(){ return document.getElementById(ED_ID); }
+const escHtmlEd = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ---------- código guardado -> lo que se ve en el editor ----------
+function edLineaAHtml(linea){
+  let t = linea;
+  t = t.replace(/\[link\]([\s\S]*?)\[\/link\]/gi, (_, c) => {
+    const p = c.split('|');
+    const url = (p[0] || '').trim();
+    const tx = p.slice(1).join('|').trim() || url;
+    return url ? '<a href="' + escHtmlEd(url) + '">' + tx + '</a>' : '';
+  });
+  t = t.replace(/\[b\]([\s\S]*?)\[\/b\]/gi, '<b>$1</b>')
+       .replace(/\[u\]([\s\S]*?)\[\/u\]/gi, '<u>$1</u>')
+       .replace(/\[mark\]([\s\S]*?)\[\/mark\]/gi, '<mark>$1</mark>');
+  return t;
+}
+
+function edParseEmbed(linea){
+  const m = linea.match(/^\[(fb|yt|tw|img)\]([\s\S]*?)\[\/\1\]$/i);
+  if(!m) return null;
+  const p = m[2].split('|');
+  return { tipo: m[1].toLowerCase(), url: (p[0] || '').trim(), epi: p.slice(1).join('|').trim() };
+}
+
+function edCodigoEmbed(tipo, url, epi){
+  return epi ? `[${tipo}]${url}|${epi}[/${tipo}]` : `[${tipo}]${url}[/${tipo}]`;
+}
+
+function edCrearEmbed(tipo, url, epi){
+  const div = document.createElement('div');
+  div.className = 'ed-embed';
+  div.contentEditable = 'false';
+  div.dataset.codigo = edCodigoEmbed(tipo, url, epi);
+  const nombres = { fb:'📘 Posteo de Facebook', yt:'▶️ Video de YouTube', tw:'🐦 Posteo de Twitter/X', img:'🖼️ Imagen' };
+  const cuerpo = tipo === 'img'
+    ? '<img src="' + escHtmlEd(url) + '" alt="">'
+    : '<div class="ed-embed-tipo">' + nombres[tipo] + '<br><span>' + escHtmlEd(url) + '</span></div>';
+  div.innerHTML =
+    '<div class="ed-embed-acc"><button type="button" data-acc="epi">✎ Epígrafe</button><button type="button" data-acc="quitar">✕ Quitar</button></div>' +
+    cuerpo +
+    '<div class="ed-embed-epi"' + (epi ? '' : ' style="display:none"') + '>' + escHtmlEd(epi) + '</div>';
+  return div;
+}
+
+// deja siempre un párrafo donde escribir antes y después de un bloque (imagen, video, posteo)
+function edAsegurarParrafo(){
+  const ed = edEl();
+  if(!ed) return;
+  const nuevo = () => { const p = document.createElement('p'); p.innerHTML = '<br>'; return p; };
+  if(!ed.firstChild) ed.appendChild(nuevo());
+  if(ed.firstElementChild && ed.firstElementChild.classList.contains('ed-embed')) ed.insertBefore(nuevo(), ed.firstChild);
+  if(ed.lastElementChild && ed.lastElementChild.classList.contains('ed-embed')) ed.appendChild(nuevo());
+  edMarcarVacio();
+}
+
+function edMarcarVacio(){
+  const ed = edEl();
+  if(!ed) return;
+  ed.classList.toggle('vacio', !ed.textContent.trim() && !ed.querySelector('.ed-embed'));
+}
+
+function codigoAEditor(cuerpo){
+  const ed = edEl();
+  if(!ed) return;
+  ed.innerHTML = '';
+  (cuerpo || '').split(/\n+/).map(l => l.trim()).filter(Boolean).forEach(l => {
+    const e = edParseEmbed(l);
+    if(e && e.url){
+      ed.appendChild(edCrearEmbed(e.tipo, e.url, e.epi));
+    } else {
+      const p = document.createElement('p');
+      p.innerHTML = edLineaAHtml(l);
+      ed.appendChild(p);
+    }
+  });
+  edAsegurarParrafo();
+}
+
+// ---------- lo que se ve en el editor -> código que se guarda ----------
+function edNodo(n){
+  if(n.nodeType === 3){
+    return n.nodeValue.replace(/\u00A0/g, ' ').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\s*\n\s*/g, ' ');
+  }
+  if(n.nodeType !== 1) return '';
+  const tag = n.tagName;
+  if(tag === 'BR') return '\n';
+  let inner = '';
+  n.childNodes.forEach(h => { inner += edNodo(h); });
+  if(!inner.trim()) return inner;
+  const st = n.style || {};
+  const negrita = tag === 'B' || tag === 'STRONG' || st.fontWeight === 'bold' || Number(st.fontWeight) >= 600;
+  const subrayado = tag === 'U' || (st.textDecorationLine || st.textDecoration || '').includes('underline');
+  const bg = st.backgroundColor || '';
+  const resaltado = tag === 'MARK' || (bg && bg !== 'transparent' && !/rgba\(\s*0,\s*0,\s*0,\s*0\s*\)/.test(bg));
+  let r = inner;
+  if(negrita) r = '[b]' + r + '[/b]';
+  if(subrayado) r = '[u]' + r + '[/u]';
+  if(resaltado) r = '[mark]' + r + '[/mark]';
+  if(tag === 'A'){
+    const href = (n.getAttribute('href') || '').trim();
+    if(href) r = '[link]' + href + '|' + r + '[/link]';
+  }
+  return r;
+}
+
+function editorACodigo(){
+  const ed = edEl();
+  if(!ed) return '';
+  const out = [];
+  ed.childNodes.forEach(n => {
+    if(n.nodeType === 1 && n.classList.contains('ed-embed')){ out.push(n.dataset.codigo); return; }
+    edNodo(n).split('\n').map(x => x.trim()).filter(Boolean).forEach(x => out.push(x));
+  });
+  return out.join('\n\n');
+}
+
+// ---------- botones de la barra ----------
+function edCmd(cmd){
+  const ed = edEl();
+  ed.focus();
+  document.execCommand('styleWithCSS', false, false);
+  document.execCommand(cmd, false, null);
+  edMarcarVacio();
+}
+
+function edResaltar(){
+  const ed = edEl();
+  ed.focus();
+  document.execCommand('styleWithCSS', false, true);
+  const actual = String(document.queryCommandValue('hiliteColor') || document.queryCommandValue('backColor') || '');
+  const yaResaltado = /rgb\(255,\s*243,\s*160\)|#fff3a0/i.test(actual);
+  document.execCommand('hiliteColor', false, yaResaltado ? 'transparent' : '#FFF3A0');
+  document.execCommand('styleWithCSS', false, false);
+}
+
+function edLink(){
+  const ed = edEl();
+  const rango = _edRango && ed.contains(_edRango.startContainer) ? _edRango.cloneRange() : null;
+  let url = prompt('Pegá la dirección (URL) del link:');
+  if(!url || !url.trim()) return;
+  url = url.trim();
+  if(!/^(https?:\/\/|mailto:)/i.test(url)) url = 'https://' + url;
+  const hayTexto = rango && !rango.collapsed;
+  let texto = url;
+  if(!hayTexto){
+    texto = prompt('Texto que se va a ver como link (por ejemplo "La Opinión Austral"):', url) || url;
+  }
+  ed.focus();
+  if(rango){ const s = window.getSelection(); s.removeAllRanges(); s.addRange(rango); }
+  if(hayTexto) document.execCommand('createLink', false, url);
+  else document.execCommand('insertHTML', false, '<a href="' + escHtmlEd(url) + '">' + escHtmlEd(texto) + '</a>');
+}
+
+function edQuitarFormato(){
+  const ed = edEl();
+  ed.focus();
+  document.execCommand('removeFormat', false, null);
+  document.execCommand('unlink', false, null);
+}
+
+// ---------- imagen / video / posteo ----------
 async function insertarEmbed(tipo){
   const nombres = { fb:'Facebook', yt:'YouTube', tw:'Twitter/X' };
-
   let url;
   if(tipo === 'img'){
     url = await elegirYSubirImagenEmbed();
@@ -571,9 +806,8 @@ async function insertarEmbed(tipo){
     if(!url || !url.trim()) return;
     url = url.trim();
   }
-
-  const epigrafe = prompt('Epígrafe (opcional, dejalo vacío si no querés poner uno):') || '';
-  insertarCodigoEnCuerpo(tipo, url, epigrafe.trim());
+  const epigrafe = (prompt('Epígrafe (opcional, dejalo vacío si no querés poner uno):') || '').trim();
+  edInsertarBloque(edCrearEmbed(tipo, url, epigrafe));
 }
 
 // Abre el selector de archivos, sube la imagen elegida a R2 y devuelve su URL pública.
@@ -597,71 +831,69 @@ function elegirYSubirImagenEmbed(){
   });
 }
 
-function insertarCodigoEnCuerpo(tipo, url, epigrafe){
-  const ta = document.getElementById('f-cuerpo');
-  const codigo = epigrafe
-    ? `[${tipo}]${url}|${epigrafe}[/${tipo}]`
-    : `[${tipo}]${url}[/${tipo}]`;
-
-  const inicio = ta.selectionStart ?? ta.value.length;
-  const fin = ta.selectionEnd ?? ta.value.length;
-  const antes = ta.value.slice(0, inicio);
-  const despues = ta.value.slice(fin);
-
-  const necesitaSaltoAntes = antes.length > 0 && !antes.endsWith('\n');
-  const necesitaSaltoDespues = despues.length > 0 && !despues.startsWith('\n');
-  const insercion = (necesitaSaltoAntes ? '\n\n' : '') + codigo + '\n' + (necesitaSaltoDespues ? '\n' : '');
-
-  ta.value = antes + insercion + despues;
-  ta.focus();
-  const nuevaPos = (antes + insercion).length;
-  ta.setSelectionRange(nuevaPos, nuevaPos);
-}
-
-// Envuelve el texto seleccionado del cuerpo con la etiqueta de formato elegida
-// ([b], [u] o [mark]). Si no hay nada seleccionado, avisa en vez de insertar
-// una etiqueta vacía.
-function formatearSeleccion(tipo){
-  const ta = document.getElementById('f-cuerpo');
-  const inicio = ta.selectionStart;
-  const fin = ta.selectionEnd;
-  const seleccionado = ta.value.slice(inicio, fin);
-
-  if(!seleccionado){
-    alert('Primero seleccioná el texto al que le querés dar formato.');
-    return;
+// pone el bloque justo debajo del párrafo donde estaba el cursor
+function edInsertarBloque(bloque){
+  const ed = edEl();
+  let nodo = null;
+  if(_edRango && ed.contains(_edRango.startContainer)){
+    nodo = _edRango.startContainer;
+    while(nodo && nodo.parentNode !== ed) nodo = nodo.parentNode;
   }
-
-  const nuevoTexto = `[${tipo}]${seleccionado}[/${tipo}]`;
-  ta.value = ta.value.slice(0, inicio) + nuevoTexto + ta.value.slice(fin);
-  ta.focus();
-  ta.setSelectionRange(inicio, inicio + nuevoTexto.length);
+  const esEmbed = x => x.nodeType === 1 && x.classList.contains('ed-embed');
+  if(nodo){
+    if(nodo.nodeType === 1 && !esEmbed(nodo) && !nodo.textContent.trim()) ed.replaceChild(bloque, nodo);
+    else ed.insertBefore(bloque, nodo.nextSibling);
+  } else {
+    const ult = ed.lastElementChild;
+    if(ult && !esEmbed(ult) && !ult.textContent.trim()) ed.insertBefore(bloque, ult);
+    else ed.appendChild(bloque);
+  }
+  edAsegurarParrafo();
 }
 
-// Inserta [link]URL|Texto[/link] inline, en el lugar exacto del cursor,
-// sin forzar renglones en blanco (a diferencia de fb/yt/tw/img, que son
-// bloques). Pensado para citar una nota o fuente dentro de una oración.
-async function insertarLink(){
-  const url = prompt('Pegá la URL de la nota o fuente que querés citar:');
-  if(!url || !url.trim()) return;
+function edIniciar(){
+  const ed = edEl();
+  if(!ed || ed.dataset.listo) return;
+  ed.dataset.listo = '1';
+  try{ document.execCommand('defaultParagraphSeparator', false, 'p'); }catch(e){}
+  edAsegurarParrafo();
 
-  const ta = document.getElementById('f-cuerpo');
-  const inicio = ta.selectionStart ?? ta.value.length;
-  const fin = ta.selectionEnd ?? ta.value.length;
-  const seleccionado = ta.value.slice(inicio, fin);
+  document.addEventListener('selectionchange', () => {
+    const s = window.getSelection();
+    if(s.rangeCount && ed.contains(s.anchorNode)) _edRango = s.getRangeAt(0).cloneRange();
+  });
+  ed.addEventListener('input', () => { if(!ed.firstChild) edAsegurarParrafo(); edMarcarVacio(); });
+  ed.addEventListener('focus', edAsegurarParrafo);
 
-  const texto = prompt('Texto que se va a ver como link (por ejemplo "La Opinión Austral"):', seleccionado) || url.trim();
-  if(!texto.trim()) return;
+  // al pegar, entra solo el texto (sin la letra, colores y basura de Word o de una web)
+  ed.addEventListener('paste', e => {
+    e.preventDefault();
+    const t = ((e.clipboardData || window.clipboardData).getData('text/plain') || '').replace(/\r/g, '');
+    const lineas = t.split(/\n+/).filter(l => l.trim());
+    if(!lineas.length) return;
+    if(lineas.length === 1) document.execCommand('insertText', false, lineas[0]);
+    else document.execCommand('insertHTML', false, lineas.map(l => '<p>' + escHtmlEd(l) + '</p>').join(''));
+  });
 
-  const codigo = `[link]${url.trim()}|${texto.trim()}[/link]`;
-  const antes = ta.value.slice(0, inicio);
-  const despues = ta.value.slice(fin);
-
-  ta.value = antes + codigo + despues;
-  ta.focus();
-  const nuevaPos = (antes + codigo).length;
-  ta.setSelectionRange(nuevaPos, nuevaPos);
+  // botones "Epígrafe" y "Quitar" de cada imagen / video / posteo
+  ed.addEventListener('click', e => {
+    const b = e.target.closest('[data-acc]');
+    if(!b) return;
+    const bloque = b.closest('.ed-embed');
+    if(!bloque) return;
+    if(b.dataset.acc === 'quitar'){
+      bloque.remove();
+      edAsegurarParrafo();
+    } else {
+      const datos = edParseEmbed(bloque.dataset.codigo);
+      if(!datos) return;
+      const nuevo = prompt('Epígrafe (dejalo vacío para quitarlo):', datos.epi);
+      if(nuevo === null) return;
+      bloque.replaceWith(edCrearEmbed(datos.tipo, datos.url, nuevo.trim()));
+    }
+  });
 }
+edIniciar();
 
 // Escapa un string para poder insertarlo dentro de un atributo HTML
 // delimitado por comillas dobles (como onclick="..."). Sin esto, un
@@ -946,7 +1178,7 @@ async function guardarNota(estadoDestino){
   const bajada = document.getElementById('f-bajada').value.trim();
   const categoria = document.getElementById('f-categoria').value;
   const firma = document.getElementById('f-firma').value.trim();
-  const cuerpo = document.getElementById('f-cuerpo').value.trim();
+  const cuerpo = editorACodigo().trim();
   const etiquetasRaw = document.getElementById('f-etiquetas').value.trim();
   const posicion = document.getElementById('f-posicion').value;
   const archivoImg = document.getElementById('f-imagen').files[0];
@@ -1015,7 +1247,7 @@ function cancelarEdicion(){
   document.getElementById('f-titulo').value = '';
   document.getElementById('f-bajada').value = '';
   document.getElementById('f-firma').value = '';
-  document.getElementById('f-cuerpo').value = '';
+  codigoAEditor('');
   document.getElementById('f-etiquetas').value = '';
   document.getElementById('f-posicion').value = 'regular';
   document.getElementById('f-categoria').querySelectorAll('option[data-extra]').forEach(o => o.remove());
@@ -1038,7 +1270,7 @@ async function editarNota(id){
   document.getElementById('f-titulo').value = n.titulo || '';
   document.getElementById('f-bajada').value = n.bajada || '';
   document.getElementById('f-firma').value = (n.autor_nombre && n.autor_nombre !== 'Redacción') ? n.autor_nombre : '';
-  document.getElementById('f-cuerpo').value = n.cuerpo || '';
+  codigoAEditor(n.cuerpo || '');
   // si la nota tiene una categoría que ya no está en la lista (ej. una vieja), se agrega solo para esta edición y no se pierde
   const selCat = document.getElementById('f-categoria');
   selCat.querySelectorAll('option[data-extra]').forEach(o => o.remove());
@@ -1218,6 +1450,12 @@ async function cargarVisitas(){
     console.error('Visitas:', e);
     cont.innerHTML = '<div class="vis-vacio">No se pudieron cargar las visitas por día. Revisá que el SQL esté corrido en Supabase y que el Worker esté actualizado.</div>';
   }
+}
+
+function cambiarEstTab(tab){
+  document.querySelectorAll('#est-tabs button').forEach(b => b.classList.toggle('activa', b.dataset.est === tab));
+  document.getElementById('est-visitas').style.display = tab === 'visitas' ? '' : 'none';
+  document.getElementById('est-lecturas').style.display = tab === 'lecturas' ? '' : 'none';
 }
 
 function cambiarVisTab(tab){
