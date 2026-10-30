@@ -1204,3 +1204,4 @@ export default {
 // Y en Supabase (SQL editor) hay que cerrar el acceso directo
 // del anon key — ver notas aparte.
 // ============================================================
+// redeploy.
