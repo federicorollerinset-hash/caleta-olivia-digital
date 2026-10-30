@@ -305,6 +305,21 @@ button, input, select, textarea{ font-family:inherit; }
 .est-tabs button.activa{ color:var(--indigo); border-bottom-color:var(--indigo); }
 .est-sub{ font-size:13px; color:var(--ink-soft); margin:-6px 0 16px; }
 
+
+/* --- más leídas del día --- */
+.vis-top{ margin-top:22px; padding-top:18px; border-top:1px dashed var(--line); }
+.vis-top h4{ font-family:'Space Grotesk',sans-serif; font-size:15px; margin:0 0 6px; }
+.vis-top ol{ list-style:none; margin:0; padding:0; }
+.vis-top li{ display:flex; align-items:center; gap:14px; padding:11px 0; border-bottom:1px solid var(--line); }
+.vis-top li:last-child{ border-bottom:none; }
+.vis-top .pos{ width:28px; height:28px; border-radius:50%; background:var(--indigo); color:#fff; font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.vis-top li:first-child .pos{ background:var(--teal); }
+.vis-top .tit{ flex:1; font-size:14px; line-height:1.35; color:var(--ink); text-decoration:none; }
+.vis-top .tit:hover{ color:var(--indigo); text-decoration:underline; }
+.vis-top .n{ font-family:'Space Grotesk',sans-serif; font-weight:700; color:var(--indigo); white-space:nowrap; font-size:14px; }
+.vis-top .n small{ font-weight:500; color:var(--ink-soft); }
+.vis-top .sin{ font-size:13px; color:var(--ink-soft); padding:6px 0; }
+
 .btn-hamburguesa{
   display:none; background:none; border:none; cursor:pointer;
   padding:6px; margin-right:10px; flex-shrink:0;
@@ -525,6 +540,7 @@ button, input, select, textarea{ font-family:inherit; }
               </div>
             </div>
             <div id="vis-grafico"><div class="vis-vacio">Cargando...</div></div>
+            <div class="vis-top" id="vis-top"></div>
           </div>
         </div>
 
@@ -1510,8 +1526,32 @@ function renderVisitas(){
     <div class="vis-nota">${nota}</div>`;
 }
 
+async function cargarTopDia(){
+  const cont = document.getElementById('vis-top');
+  if(!cont) return;
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  try{
+    const r = await authFetch('/api/estadisticas/top-dia');
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    const notas = j.notas || [];
+    if(!notas.length){
+      cont.innerHTML = '<h4>🔥 Las 3 más leídas de hoy</h4><div class="sin">Todavía no hay lecturas registradas hoy.</div>';
+      return;
+    }
+    cont.innerHTML = '<h4>🔥 Las 3 más leídas de hoy</h4><ol>' + notas.map((n, i) => {
+      const href = n.slug ? '/nota/' + encodeURIComponent(n.slug) : '/nota?id=' + encodeURIComponent(n.id);
+      return `<li><span class="pos">${i + 1}</span><a class="tit" href="${href}" target="_blank" rel="noopener">${esc(n.titulo)}</a><span class="n">${_num(n.vistas)} <small>${n.vistas === 1 ? 'vista' : 'vistas'}</small></span></li>`;
+    }).join('') + '</ol>';
+  }catch(e){
+    console.error('Top del día:', e);
+    cont.innerHTML = '<h4>🔥 Las 3 más leídas de hoy</h4><div class="sin">No se pudo cargar. Revisá que el Worker esté actualizado.</div>';
+  }
+}
+
 async function cargarEstadisticas(){
   cargarVisitas();
+  cargarTopDia();
   const stats = document.getElementById('stats-lecturas');
   const cont = document.getElementById('ranking-lecturas');
   const { data, error } = await sb.from('notas').select('*').eq('estado','publicada').order('vistas', {ascending:false});
