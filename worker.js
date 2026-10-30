@@ -1065,6 +1065,29 @@ async function handleApi(request, env, url) {
     return jsonResponse({ ok: true, dias: await res.json() });
   }
 
+  // ---------- LAS 3 NOTAS MÁS LEÍDAS DEL DÍA (admin y editor) ----------
+  if (pathname === '/api/estadisticas/top-dia' && metodo === 'GET') {
+    const sesion = await requireSesion(request, env);
+    if (!sesion) return jsonResponse({ error: 'No autorizado.' }, 401);
+    if (sesion.rol === 'redactor') return jsonResponse({ error: 'No autorizado.' }, 403);
+    // "hoy" según la hora de Argentina (UTC-3), igual que el registro diario
+    const hoy = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10);
+    const res = await sbService(env, `vistas_dia?fecha=eq.${hoy}&select=nota_id,vistas&order=vistas.desc&limit=10`);
+    if (!res.ok) return jsonResponse({ error: 'No se pudieron leer las notas más leídas.' }, 500);
+    const filas = await res.json();
+    const ids = filas.map(f => f.nota_id).filter(id => /^[0-9a-f-]{36}$/i.test(id));
+    const datos = {};
+    if (ids.length) {
+      const rn = await sbService(env, `notas?id=in.(${ids.join(',')})&estado=eq.publicada&select=id,titulo,slug`);
+      if (rn.ok) (await rn.json()).forEach(n => { datos[n.id] = n; });
+    }
+    const notas = filas
+      .filter(f => datos[f.nota_id])
+      .slice(0, 3)
+      .map(f => ({ id: f.nota_id, titulo: datos[f.nota_id].titulo, slug: datos[f.nota_id].slug, vistas: f.vistas }));
+    return jsonResponse({ ok: true, fecha: hoy, notas });
+  }
+
   // ---------- USUARIOS (solo admin) ----------
   if (pathname === '/api/usuarios' && metodo === 'GET') {
     const sesion = await requireSesion(request, env);
@@ -1204,5 +1227,3 @@ export default {
 // Y en Supabase (SQL editor) hay que cerrar el acceso directo
 // del anon key — ver notas aparte.
 // ============================================================
-// redeploy.
-// redeploy
