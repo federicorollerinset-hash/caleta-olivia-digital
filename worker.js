@@ -1040,6 +1040,11 @@ async function handleApi(request, env, url) {
 
   // ---------- SUMAR UNA VISTA (público, sin sesión — solo suma 1) ----------
   if (pathname.startsWith('/api/vista/') && metodo === 'POST') {
+    // no cuenta robots conocidos (buscadores, vistas previas de redes, monitoreo, scripts)
+    const ua = request.headers.get('User-Agent') || '';
+    if (!ua || /bot|crawl|spider|slurp|facebookexternalhit|facebot|whatsapp|telegram|lighthouse|headless|python-requests|curl\/|wget|axios|node-fetch|go-http-client|uptime|monitor|pingdom/i.test(ua)) {
+      return jsonResponse({ ok: true, contada: false });
+    }
     const id = pathname.split('/').pop();
     const res = await sbService(env, `notas?id=eq.${id}&estado=eq.publicada&select=vistas`);
     const filas = await res.json();

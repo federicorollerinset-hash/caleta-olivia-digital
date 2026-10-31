@@ -757,7 +757,18 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
     cargarRelacionadas(n.categoria, n.id);
 
     // suma una vista (no bloquea la carga de la página, se dispara en segundo plano)
-    fetch('/api/vista/' + n.id, { method: 'POST', keepalive: true }).catch(() => {});
+    // solo cuenta lectores: no suma si hay una sesión del panel abierta en este navegador,
+    // y cuenta una sola vez por nota y por día en cada navegador
+    (function contarVista(){
+      try{
+        if(localStorage.getItem('co_digital_sesion')) return;
+        const dia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+        const clave = 'vista_' + n.id;
+        if(localStorage.getItem(clave) === dia) return;
+        localStorage.setItem(clave, dia);
+      }catch(e){}  // si el navegador no deja guardar, se cuenta igual
+      fetch('/api/vista/' + n.id, { method: 'POST', keepalive: true }).catch(() => {});
+    })();
 
     cargarMasLeidas();
   }
