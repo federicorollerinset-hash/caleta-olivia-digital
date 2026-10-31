@@ -890,16 +890,19 @@ footer{
   function normalizar(txt){
     return (txt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   }
+  // "Hoy" / "Ayer" se calculan por día del calendario en hora de Argentina (no por "menos de 24 horas")
+  const TZ_AR = 'America/Argentina/Buenos_Aires';
+  function diaAR(d){ return d.toLocaleDateString('en-CA', { timeZone: TZ_AR }); }
+  function horaAR(d){ return d.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', timeZone: TZ_AR }); }
   function tiempoRelativo(fechaIso){
     const f = new Date(fechaIso);
     const ahora = new Date();
-    const diffMs = ahora - f;
-    const diffMin = Math.floor(diffMs / 60000);
+    const diffMin = Math.floor((ahora - f) / 60000);
     if(diffMin < 60) return diffMin <= 1 ? 'Hace un momento' : `Hace ${diffMin} min`;
-    const diffH = Math.floor(diffMin / 60);
-    if(diffH < 24) return `Hoy, ${f.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'})}`;
-    if(diffH < 48) return `Ayer, ${f.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'})}`;
-    return f.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit'}) + ' - ' + f.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+    const diaNota = diaAR(f);
+    if(diaNota === diaAR(ahora)) return `Hoy, ${horaAR(f)}`;
+    if(diaNota === diaAR(new Date(ahora.getTime() - 86400000))) return `Ayer, ${horaAR(f)}`;
+    return f.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', timeZone: TZ_AR }) + ' - ' + horaAR(f);
   }
   function etiquetasHtml(etiquetas){
     if(!etiquetas || etiquetas.length === 0) return '';
@@ -1093,10 +1096,9 @@ async function cargarPortada(){
 
   function horaCorta(fechaIso){
     const f = new Date(fechaIso);
-    const mismoDia = f.toDateString() === new Date().toDateString();
-    return mismoDia
-      ? f.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'})
-      : f.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit'});
+    return diaAR(f) === diaAR(new Date())
+      ? horaAR(f)
+      : f.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', timeZone: TZ_AR });
   }
 
   function renderUltimas(data){
