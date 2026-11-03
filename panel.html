@@ -1452,6 +1452,8 @@ function periodosVisitas(tab){
   return out;
 }
 
+let _totalAcum = null;
+
 async function cargarVisitas(){
   const cont = document.getElementById('vis-grafico');
   if(!cont) return;
@@ -1522,6 +1524,7 @@ function renderVisitas(){
       <div class="stat-card"><div class="num">${_num(semV)}</div><div class="lbl">Esta semana</div></div>
       <div class="stat-card"><div class="num">${_num(mesV)}</div><div class="lbl">Este mes</div></div>
       <div class="stat-card"><div class="num">${_num(mejorV)}</div><div class="lbl">Mejor día${mejorF ? ' · ' + _ddmm(_ms(mejorF)) + '/' + mejorF.slice(0,4) : ''}</div></div>
+      <div class="stat-card"><div class="num" id="vis-total-acum">${_totalAcum === null ? '…' : _num(_totalAcum)}</div><div class="lbl">Lecturas totales acumuladas</div></div>
     </div>
     <div class="vis-nota">${nota}</div>`;
 }
@@ -1557,6 +1560,9 @@ async function cargarEstadisticas(){
   const { data, error } = await sb.from('notas').select('*').eq('estado','publicada').order('vistas', {ascending:false});
   if(error || !data){ cont.innerHTML = '<div style="padding:20px;">Error al cargar estadísticas.</div>'; return; }
   if(data.length === 0){
+    _totalAcum = 0;
+    const elTot0 = document.getElementById('vis-total-acum');
+    if(elTot0) elTot0.textContent = '0';
     stats.innerHTML = '';
     cont.innerHTML = '<div style="padding:20px; color:var(--ink-soft); font-size:13px;">Todavía no hay notas publicadas.</div>';
     return;
@@ -1565,6 +1571,9 @@ async function cargarEstadisticas(){
   const totalVistas = data.reduce((acc,n) => acc + (n.vistas || 0), 0);
   const promedio = Math.round(totalVistas / data.length);
   const masLeida = data[0];
+  _totalAcum = totalVistas;
+  const elTot = document.getElementById('vis-total-acum');
+  if(elTot) elTot.textContent = _num(totalVistas);
 
   stats.innerHTML = `
     <div class="stat-card"><div class="num">${totalVistas.toLocaleString('es-AR')}</div><div class="lbl">Vistas totales</div></div>
