@@ -475,6 +475,7 @@ button, input, select, textarea{ font-family:inherit; }
                 <button type="button" class="ed-btn" onclick="insertarEmbed('yt')">▶️ YouTube</button>
                 <button type="button" class="ed-btn" onclick="insertarEmbed('fb')">📘 Facebook</button>
                 <button type="button" class="ed-btn" onclick="insertarEmbed('tw')">🐦 Twitter/X</button>
+                <button type="button" class="ed-btn" onclick="insertarEmbed('html')" title="Pegar código HTML (mapas, iframes, widgets, etc.)">&lt;/&gt; Código HTML</button>
               </div>
               <div id="f-cuerpo-ed" contenteditable="true" spellcheck="true" class="vacio"></div>
             </div>
@@ -668,7 +669,7 @@ function edLineaAHtml(linea){
 }
 
 function edParseEmbed(linea){
-  const m = linea.match(/^\[(fb|yt|tw|img)\]([\s\S]*?)\[\/\1\]$/i);
+  const m = linea.match(/^\[(fb|yt|tw|img|html)\]([\s\S]*?)\[\/\1\]$/i);
   if(!m) return null;
   const p = m[2].split('|');
   return { tipo: m[1].toLowerCase(), url: (p[0] || '').trim(), epi: p.slice(1).join('|').trim() };
@@ -683,10 +684,10 @@ function edCrearEmbed(tipo, url, epi){
   div.className = 'ed-embed';
   div.contentEditable = 'false';
   div.dataset.codigo = edCodigoEmbed(tipo, url, epi);
-  const nombres = { fb:'📘 Posteo de Facebook', yt:'▶️ Video de YouTube', tw:'🐦 Posteo de Twitter/X', img:'🖼️ Imagen' };
+  const nombres = { fb:'📘 Posteo de Facebook', yt:'▶️ Video de YouTube', tw:'🐦 Posteo de Twitter/X', img:'🖼️ Imagen', html:'&lt;/&gt; Código HTML' };
   const cuerpo = tipo === 'img'
     ? '<img src="' + escHtmlEd(url) + '" alt="">'
-    : '<div class="ed-embed-tipo">' + nombres[tipo] + '<br><span>' + escHtmlEd(url) + '</span></div>';
+    : '<div class="ed-embed-tipo">' + nombres[tipo] + '<br><span>' + (tipo === 'html' ? 'Se va a ver en la nota publicada, no acá' : escHtmlEd(url)) + '</span></div>';
   div.innerHTML =
     '<div class="ed-embed-acc"><button type="button" data-acc="epi">✎ Epígrafe</button><button type="button" data-acc="quitar">✕ Quitar</button></div>' +
     cuerpo +
@@ -811,7 +812,37 @@ function edQuitarFormato(){
 }
 
 // ---------- imagen / video / posteo ----------
+function pedirCodigoHtml(){
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(20,16,50,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    ov.innerHTML = '<div style="background:#fff;border-radius:12px;padding:20px;width:100%;max-width:680px;display:flex;flex-direction:column;gap:12px;font-family:Inter,sans-serif">'
+      + '<div style="font-weight:700;font-size:15px">Pegá el código HTML</div>'
+      + '<textarea style="width:100%;height:280px;font-family:monospace;font-size:13px;padding:10px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box" placeholder="<iframe ...></iframe>"></textarea>'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end">'
+      + '<button type="button" data-a="no" style="padding:9px 16px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-weight:600">Cancelar</button>'
+      + '<button type="button" data-a="ok" style="padding:9px 16px;border:0;background:#3B2F9E;color:#fff;border-radius:8px;cursor:pointer;font-weight:600">Insertar</button>'
+      + '</div></div>';
+    document.body.appendChild(ov);
+    const ta = ov.querySelector('textarea');
+    ta.focus();
+    const cerrar = v => { ov.remove(); resolve(v); };
+    ov.addEventListener('click', e => {
+      const a = e.target.dataset && e.target.dataset.a;
+      if(a === 'no') cerrar(null);
+      if(a === 'ok') cerrar(ta.value.trim() || null);
+    });
+  });
+}
+
 async function insertarEmbed(tipo){
+  if(tipo === 'html'){
+    const cod = await pedirCodigoHtml();
+    if(!cod) return;
+    const b64 = btoa(unescape(encodeURIComponent(cod)));
+    edInsertarBloque(edCrearEmbed('html', b64, ''));
+    return;
+  }
   const nombres = { fb:'Facebook', yt:'YouTube', tw:'Twitter/X' };
   let url;
   if(tipo === 'img'){

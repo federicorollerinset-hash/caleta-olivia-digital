@@ -689,7 +689,7 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
   // Convierte una línea con [fb], [yt], [tw] o [img] en el embed correspondiente.
   // Sintaxis: [tipo]URL[/tipo]  o  [tipo]URL|Epígrafe[/tipo]
   function lineaAEmbed(linea){
-    const m = linea.match(/^\[(fb|yt|tw|img)\]([\s\S]*?)\[\/\1\]$/i);
+    const m = linea.match(/^\[(fb|yt|tw|img|html)\]([\s\S]*?)\[\/\1\]$/i);
     if(!m) return null;
     const tipo = m[1].toLowerCase();
     const partes = m[2].split('|');
@@ -699,6 +699,14 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
 
     if(!url) return null;
 
+    if(tipo === 'html'){
+      let codigo = '';
+      try{ codigo = decodeURIComponent(escape(atob(url))); }catch(e){ return null; }
+      const doc = '<!doctype html><html><head><meta charset="utf-8"><base target="_blank"><style>body{margin:0;font-family:sans-serif}</style></head><body>' + codigo
+        + '<script>(function(){function s(){parent.postMessage({notaHtmlAlto:document.documentElement.scrollHeight},"*")}window.addEventListener("load",s);if(window.ResizeObserver)new ResizeObserver(s).observe(document.body);setTimeout(s,500);setTimeout(s,2000);setTimeout(s,5000)})()<\/script></body></html>';
+      const srcdoc = doc.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+      return `<figure class="embed embed-html"><iframe class="iframe-html" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" srcdoc="${srcdoc}" style="width:100%;height:300px;border:0;display:block" loading="lazy"></iframe>${capHtml}</figure>`;
+    }
     if(tipo === 'img'){
       return `<figure class="embed embed-img"><img src="${escapeHtml(url)}" alt="${escapeHtml(epigrafe)}" loading="lazy">${capHtml}</figure>`;
     }
@@ -741,6 +749,14 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
   function procesarInline(texto){
     return procesarFormatoInline(procesarLinksInline(texto));
   }
+
+  // el bloque HTML le avisa su alto real a la nota para no quedar cortado
+  window.addEventListener('message', e => {
+    if(!e.data || typeof e.data.notaHtmlAlto !== 'number') return;
+    document.querySelectorAll('iframe.iframe-html').forEach(f => {
+      if(f.contentWindow === e.source) f.style.height = Math.max(40, e.data.notaHtmlAlto) + 'px';
+    });
+  });
 
   function parrafosHtml(cuerpo, bloqueExtra){
     const items = (cuerpo || '').split(/\n+/).map(l => l.trim()).filter(Boolean).map(linea => {
