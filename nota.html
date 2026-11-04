@@ -702,6 +702,25 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
     if(tipo === 'html'){
       let codigo = '';
       try{ codigo = decodeURIComponent(escape(atob(url))); }catch(e){ return null; }
+      // iframe suelto de un sitio conocido (Facebook, YouTube, etc.): se muestra directo para que funcione el reproductor
+      const mIf = codigo.match(/^\s*<iframe\b([^>]*)>\s*<\/iframe>\s*$/i);
+      if(mIf){
+        const ms = mIf[1].match(/\bsrc\s*=\s*"([^"]+)"/i);
+        if(ms){
+          const srcLimpio = ms[1].replace(/&amp;/g, '&');
+          let host = '';
+          try{ const u = new URL(srcLimpio); host = u.protocol === 'https:' ? u.hostname : ''; }catch(e){}
+          const permitidos = ['facebook.com', 'youtube.com', 'youtube-nocookie.com', 'player.vimeo.com', 'open.spotify.com', 'instagram.com', 'tiktok.com', 'google.com'];
+          if(host && permitidos.some(h => host === h || host.endsWith('.' + h))){
+            const mw = mIf[1].match(/\bwidth\s*=\s*"?(\d+)/i);
+            const mh = mIf[1].match(/\bheight\s*=\s*"?(\d+)/i);
+            const w = mw ? mw[1] : '500';
+            const h = mh ? mh[1] : '315';
+            const srcAttr = srcLimpio.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+            return `<figure class="embed embed-html-directo" style="display:flex;flex-direction:column;align-items:center"><iframe src="${srcAttr}" width="${w}" height="${h}" style="border:none;overflow:hidden;max-width:100%" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" loading="lazy"></iframe>${capHtml}</figure>`;
+          }
+        }
+      }
       const doc = '<!doctype html><html><head><meta charset="utf-8"><base target="_blank"><style>body{margin:0;font-family:sans-serif}</style></head><body>' + codigo
         + '<script>(function(){function s(){parent.postMessage({notaHtmlAlto:document.documentElement.scrollHeight},"*")}window.addEventListener("load",s);if(window.ResizeObserver)new ResizeObserver(s).observe(document.body);setTimeout(s,500);setTimeout(s,2000);setTimeout(s,5000)})()<\/script></body></html>';
       const srcdoc = doc.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
