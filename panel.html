@@ -306,6 +306,25 @@ button, input, select, textarea{ font-family:inherit; }
 .est-sub{ font-size:13px; color:var(--ink-soft); margin:-6px 0 16px; }
 
 
+/* --- notas del día --- */
+.dia-ctrl{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 16px; }
+.dia-ctrl button{
+  padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; border-radius:20px;
+  background:#fff; border:1px solid var(--line); color:var(--ink-soft);
+}
+.dia-ctrl button:hover{ border-color:var(--indigo); color:var(--indigo); }
+.dia-ctrl button.activa{ background:var(--indigo); border-color:var(--indigo); color:#fff; }
+.dia-ctrl input[type=date]{
+  padding:7px 12px; font-size:13px; border:1px solid var(--line); border-radius:20px; background:#fff; color:var(--ink);
+}
+.dia-ctrl .dia-act{ margin-left:auto; }
+.dia-barra{ height:6px; border-radius:4px; background:#EDE7FB; margin-top:8px; overflow:hidden; }
+.dia-barra i{ display:block; height:100%; background:var(--indigo); border-radius:4px; }
+.dia-barra.baja i{ background:#B9B5CE; }
+.dia-leyenda{ font-size:12px; color:var(--ink-soft); margin:10px 2px 0; }
+.dia-link{ color:inherit; }
+.dia-link:hover{ color:var(--indigo); text-decoration:underline; }
+
 /* --- más leídas del día --- */
 .vis-top{ margin-top:22px; padding-top:18px; border-top:1px dashed var(--line); }
 .vis-top h4{ font-family:'Space Grotesk',sans-serif; font-size:15px; margin:0 0 6px; }
@@ -527,6 +546,7 @@ button, input, select, textarea{ font-family:inherit; }
         <div class="est-tabs" id="est-tabs">
           <button type="button" data-est="visitas" class="activa" onclick="cambiarEstTab('visitas')">📈 Visitas al sitio</button>
           <button type="button" data-est="lecturas" onclick="cambiarEstTab('lecturas')">📖 Lecturas por nota</button>
+          <button type="button" data-est="dia" onclick="cambiarEstTab('dia')">🗓️ Notas del día</button>
         </div>
 
         <div id="est-visitas">
@@ -553,6 +573,19 @@ button, input, select, textarea{ font-family:inherit; }
             <span id="buscar-stats-cont"></span>
           </div>
           <div class="tabla-notas" id="ranking-lecturas"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
+        </div>
+
+        <div id="est-dia" style="display:none;">
+          <p class="est-sub">Solo las notas publicadas ese día, para ver cuáles andan y cuáles no. En "Hoy" son las vistas de hoy; en días anteriores son las vistas acumuladas hasta ahora.</p>
+          <div class="dia-ctrl">
+            <button type="button" id="dia-btn-hoy" onclick="elegirDiaNotas(0)">Hoy</button>
+            <button type="button" id="dia-btn-ayer" onclick="elegirDiaNotas(1)">Ayer</button>
+            <input type="date" id="dia-fecha" onchange="renderNotasDia()">
+            <button type="button" class="dia-act" onclick="cargarNotasDia()">↻ Actualizar</button>
+          </div>
+          <div class="tarjetas-stats" id="stats-dia"></div>
+          <div class="tabla-notas" id="lista-dia"><div style="padding:20px; color:var(--ink-soft); font-size:13px;">Cargando...</div></div>
+          <div class="dia-leyenda">Barra gris = por debajo del promedio del día.</div>
         </div>
       </section>
 
@@ -1505,6 +1538,75 @@ function cambiarEstTab(tab){
   document.querySelectorAll('#est-tabs button').forEach(b => b.classList.toggle('activa', b.dataset.est === tab));
   document.getElementById('est-visitas').style.display = tab === 'visitas' ? '' : 'none';
   document.getElementById('est-lecturas').style.display = tab === 'lecturas' ? '' : 'none';
+  document.getElementById('est-dia').style.display = tab === 'dia' ? '' : 'none';
+  if(tab === 'dia') cargarNotasDia();
+}
+
+/* --- Notas del día: solo las notas publicadas en la fecha elegida --- */
+let _notasDia = null;
+const _arIso = ts => new Date(ts).toLocaleDateString('en-CA', { timeZone:'America/Argentina/Buenos_Aires' });
+
+async function cargarNotasDia(){
+  const cont = document.getElementById('lista-dia');
+  const inp = document.getElementById('dia-fecha');
+  if(!cont || !inp) return;
+  if(!inp.value) inp.value = _arIso(Date.now());
+  const { data, error } = await sb.from('notas').select('*').eq('estado','publicada').order('created_at', {ascending:false});
+  if(error || !data){ cont.innerHTML = '<div style="padding:20px;">Error al cargar las notas del día.</div>'; return; }
+  _notasDia = data;
+  renderNotasDia();
+}
+
+function elegirDiaNotas(atras){
+  document.getElementById('dia-fecha').value = _arIso(Date.now() - atras * 86400000);
+  renderNotasDia();
+}
+
+function renderNotasDia(){
+  const cont = document.getElementById('lista-dia');
+  const stats = document.getElementById('stats-dia');
+  const inp = document.getElementById('dia-fecha');
+  if(!cont || !inp || !_notasDia) return;
+  const fecha = inp.value || _arIso(Date.now());
+  document.getElementById('dia-btn-hoy').classList.toggle('activa', fecha === _arIso(Date.now()));
+  document.getElementById('dia-btn-ayer').classList.toggle('activa', fecha === _arIso(Date.now() - 86400000));
+
+  const notas = _notasDia
+    .filter(n => _arIso(n.publicada_at || n.created_at) === fecha)
+    .sort((a, b) => (b.vistas || 0) - (a.vistas || 0));
+
+  if(notas.length === 0){
+    stats.innerHTML = '';
+    cont.innerHTML = '<div style="padding:20px; color:var(--ink-soft); font-size:13px;">No hay notas publicadas ese día.</div>';
+    return;
+  }
+
+  const total = notas.reduce((a, n) => a + (n.vistas || 0), 0);
+  const prom = Math.round(total / notas.length);
+  const max = Math.max(...notas.map(n => n.vistas || 0), 1);
+  stats.innerHTML = `
+    <div class="stat-card"><div class="num">${notas.length}</div><div class="lbl">Notas publicadas</div></div>
+    <div class="stat-card"><div class="num">${total.toLocaleString('es-AR')}</div><div class="lbl">Vistas de esas notas</div></div>
+    <div class="stat-card"><div class="num">${prom.toLocaleString('es-AR')}</div><div class="lbl">Promedio por nota</div></div>
+  `;
+
+  cont.innerHTML = notas.map((n, i) => {
+    const v = n.vistas || 0;
+    const rankClass = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
+    const href = n.slug ? '/nota/' + encodeURIComponent(n.slug) : '/nota?id=' + encodeURIComponent(n.id);
+    const hora = new Date(n.publicada_at || n.created_at).toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires' });
+    return `
+    <div class="fila-nota">
+      <div class="rank-num ${rankClass}">${i + 1}</div>
+      <div class="miniatura" style="${n.imagen_url ? `background-image:url('${n.imagen_url}'); background-size:cover;` : ''}"></div>
+      <div class="info">
+        <div class="titulo"><a class="dia-link" href="${href}" target="_blank" rel="noopener">${escStats(n.titulo)}</a></div>
+        <div class="meta">${escStats(n.categoria)} · por ${escStats(n.autor_nombre || '')} · ${hora} hs</div>
+        <div class="dia-barra${v < prom ? ' baja' : ''}"><i style="width:${Math.max(2, Math.round(v / max * 100))}%"></i></div>
+      </div>
+      <div class="badge-vistas">👁️ ${v.toLocaleString('es-AR')}</div>
+    </div>`;
+  }).join('');
 }
 
 function cambiarVisTab(tab){
