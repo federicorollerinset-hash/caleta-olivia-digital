@@ -345,6 +345,14 @@ main{
 .encuesta .enc-pie{ font-family:'Space Grotesk',sans-serif; font-size:12px; color:var(--ink-soft); margin-top:12px; }
 .encuesta .enc-ver{ background:none; border:0; padding:0; font:inherit; color:var(--indigo); cursor:pointer; text-decoration:underline; }
 
+#encuesta{ scroll-margin-top:130px; }
+@keyframes encDestello{
+  0%{ box-shadow:0 0 0 0 rgba(26,0,160,.45); }
+  70%{ box-shadow:0 0 0 14px rgba(26,0,160,0); }
+  100%{ box-shadow:0 0 0 0 rgba(26,0,160,0); }
+}
+.encuesta.destello{ animation:encDestello 1.2s ease-out 2; }
+
 /* --- sidebar --- */
 .sidebar{ display:flex; flex-direction:column; gap:24px; }
 .ad-slot{
@@ -818,7 +826,7 @@ footer{
       300x600
     </div>
 
-    <div class="encuesta-sticky"><div id="encuesta-box" style="display:none;"></div></div>
+    <div class="encuesta-sticky" id="encuesta"><div id="encuesta-box" style="display:none;"></div></div>
   </aside>
 </main>
 
@@ -924,7 +932,28 @@ footer{
       pintar();
     }catch(e){ console.error('Encuesta:', e); box.style.display = 'none'; }
   }
-  cargarEncuesta();
+  cargarEncuesta().then(irAEncuesta);
+
+  /* Link directo: caletaoliviadigital.com.ar/#encuesta baja hasta la encuesta */
+  function irAEncuesta(){
+    if(location.hash !== '#encuesta') return;
+    const wrap = document.getElementById('encuesta');
+    const box = document.getElementById('encuesta-box');
+    if(!wrap || !box || box.style.display === 'none') return;
+    let cancelado = false;
+    const cancelar = () => { cancelado = true; };
+    window.addEventListener('wheel', cancelar, { once:true, passive:true });
+    window.addEventListener('touchmove', cancelar, { once:true, passive:true });
+    const ir = () => { if(!cancelado) wrap.scrollIntoView({ behavior:'auto', block:'start' }); };
+    ir();
+    // la página termina de acomodarse (notas, imágenes): reubicamos un par de veces
+    setTimeout(ir, 700);
+    setTimeout(ir, 1500);
+    setTimeout(() => {
+      const e = box.querySelector('.encuesta');
+      if(e) e.classList.add('destello');
+    }, 300);
+  }
 
 
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
