@@ -847,7 +847,7 @@ footer{ background:var(--indigo-deep); color:rgba(255,255,255,.7); padding:36px 
     let consulta = sb.from('notas').select('*').eq('estado','publicada');
     consulta = notaSlug ? consulta.eq('slug', notaSlug) : consulta.eq('id', notaId);
     const { data: n, error } = await consulta.maybeSingle();
-    if(error || !n){ mostrarNoEncontrada(); return; }
+    if(error || !n){ if(!document.getElementById('nota-completa').innerHTML.trim()) mostrarNoEncontrada(); return; }
 
     // si entraron por un link viejo (?id=...), la barra de direcciones pasa a la URL con título
     if(n.slug){
