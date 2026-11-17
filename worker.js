@@ -691,6 +691,82 @@ function armarMetaNota(nota, url) {
   return tags;
 }
 
+// ============================================================
+// NOTA RENDERIZADA EN EL SERVIDOR
+// El texto de la nota viaja ya puesto dentro del HTML, así lo ven
+// Google, WhatsApp y cualquier lector que no ejecute JavaScript.
+// Apenas carga la página, el script de nota.html lo reemplaza por la
+// versión completa (con videos, tweets, "te puede interesar", etc.),
+// usando las mismas clases, así que no se nota el cambio.
+// ============================================================
+const WA_CANAL_URL = 'https://whatsapp.com/channel/0029Vb99hHR0wajqlAchqH0F';
+const WA_ICONO_PATH = 'M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z';
+
+// párrafo: escapa el texto y después aplica [link], [b], [u] y [mark]
+function inlineNotaSSR(texto) {
+  let t = escHtml(texto);
+  t = t.replace(/\[link\]([\s\S]*?)\[\/link\]/gi, (_, contenido) => {
+    const partes = contenido.split('|');
+    const u = (partes[0] || '').trim();
+    const txt = partes.slice(1).join('|').trim() || u;
+    if (!/^https?:\/\//i.test(u)) return txt;
+    return '<a href="' + u + '" target="_blank" rel="noopener noreferrer" class="link-cita">' + txt + '</a>';
+  });
+  t = t.replace(/\[b\]([\s\S]*?)\[\/b\]/gi, '<strong>$1</strong>');
+  t = t.replace(/\[u\]([\s\S]*?)\[\/u\]/gi, '<u>$1</u>');
+  t = t.replace(/\[mark\]([\s\S]*?)\[\/mark\]/gi, '<mark class="resaltado">$1</mark>');
+  return t;
+}
+
+// cuerpo: párrafos + imágenes. Videos, Facebook, tweets y bloques HTML los arma el navegador.
+function cuerpoNotaSSR(cuerpo) {
+  return (cuerpo || '').split(/\n+/).map(l => l.trim()).filter(Boolean).map(linea => {
+    const m = linea.match(/^\[(fb|yt|tw|img|html)\]([\s\S]*?)\[\/\1\]$/i);
+    if (m) {
+      if (m[1].toLowerCase() !== 'img') return '';
+      const partes = m[2].split('|');
+      const src = (partes[0] || '').trim();
+      if (!/^https?:\/\//i.test(src)) return '';
+      const epi = partes.slice(1).join('|').trim();
+      return '<figure class="embed embed-img"><img src="' + escHtml(src) + '" alt="' + escHtml(epi) + '" loading="lazy">' +
+        (epi ? '<figcaption>' + escHtml(epi) + '</figcaption>' : '') + '</figure>';
+    }
+    return '<p>' + inlineNotaSSR(linea) + '</p>';
+  }).join('');
+}
+
+function articuloNotaSSR(nota, url) {
+  const canonica = nota.slug ? `${url.origin}/nota/${nota.slug}` : `${url.origin}/nota?id=${nota.id}`;
+  const zona = 'America/Argentina/Buenos_Aires';
+  let fecha = '';
+  try {
+    const f = new Date(nota.created_at);
+    fecha = f.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', timeZone: zona }) + ', ' +
+            f.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: zona });
+  } catch (e) {}
+
+  const portada = nota.imagen_url
+    ? '<div class="img-portada-nota" style="background-image:url(\'' + escHtml(nota.imagen_url).replace(/'/g, '%27') + '\'); background-size:cover; background-position:center;"></div>'
+    : '<div class="img-portada-nota">sin imagen</div>';
+
+  return '<div class="cat-nota"><span class="play-tri"></span>' + escHtml(nota.categoria || '') + '</div>' +
+    '<h1>' + escHtml(nota.titulo || '') + '</h1>' +
+    (nota.bajada ? '<p class="bajada">' + escHtml(nota.bajada) + '</p>' : '') +
+    '<div class="meta-nota"><span class="autor">' + escHtml(nota.autor_nombre || 'Redacción') + '</span>' +
+      '<span class="punto"></span><span>' + escHtml(fecha) + '</span>' +
+      '<div class="compartir">' +
+        '<a href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(canonica) + '" target="_blank" rel="noopener" title="Compartir en Facebook">f</a>' +
+        '<a href="https://wa.me/?text=' + encodeURIComponent((nota.titulo || '') + ' ' + canonica) + '" target="_blank" rel="noopener" title="Compartir en WhatsApp">w</a>' +
+        '<a href="#" onclick="navigator.clipboard.writeText(window.location.href); this.textContent=\'✓\'; return false;" title="Copiar link">🔗</a>' +
+      '</div></div>' +
+    portada +
+    '<a class="wa-tira" href="' + WA_CANAL_URL + '" target="_blank" rel="noopener">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + WA_ICONO_PATH + '"/></svg>' +
+      '<span class="wa-tira-txt">Recibí las noticias del día en tu WhatsApp</span>' +
+      '<span class="wa-tira-btn">Sumate</span></a>' +
+    '<div class="cuerpo-nota">' + cuerpoNotaSSR(nota.cuerpo) + '</div>';
+}
+
 async function responderPaginaNota(env, url, nota, status = 200) {
   const pagina = await obtenerPaginaNota(env, url);
   if (!pagina) return new Response('Página no disponible', { status: 500 });
@@ -698,6 +774,9 @@ async function responderPaginaNota(env, url, nota, status = 200) {
 
   if (nota) {
     html = html.replace(/<title>[\s\S]*?<\/title>/, () => armarMetaNota(nota, url));
+    // el texto de la nota ya viaja dentro del HTML (el script de la página lo reemplaza al cargar)
+    html = html.replace(/<article class="nota-completa" id="nota-completa"[^>]*>[\s\S]*?<\/article>/,
+      () => '<article class="nota-completa" id="nota-completa">' + articuloNotaSSR(nota, url) + '</article>');
   } else if (status === 404) {
     html = html.replace('</head>', '<meta name="robots" content="noindex">\n</head>');
   }
