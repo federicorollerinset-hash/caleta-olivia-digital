@@ -1218,8 +1218,6 @@ async function handleApi(request, env, url) {
       ? datos.opciones.filter(o => o && String(o.texto || '').trim()).slice(0, 6) : [];
     if (!pregunta || opciones.length < 2) return jsonResponse({ error: 'Escribí la pregunta y al menos 2 opciones.' }, 400);
 
-    // solo una encuesta activa a la vez
-    await sbService(env, 'encuestas?activa=eq.true', { method: 'PATCH', body: JSON.stringify({ activa: false }), prefer: 'return=minimal' });
     const res = await sbService(env, 'encuestas', { method: 'POST', body: JSON.stringify({ pregunta, activa: true }) });
     if (!res.ok) return jsonResponse({ error: 'No se pudo crear la encuesta.' }, 500);
     const enc = (await res.json())[0];
@@ -1242,9 +1240,6 @@ async function handleApi(request, env, url) {
     }
     const datos = await request.json().catch(() => null);
     if (!datos || typeof datos.activa !== 'boolean') return jsonResponse({ error: 'Datos inválidos.' }, 400);
-    if (datos.activa) {
-      await sbService(env, 'encuestas?activa=eq.true', { method: 'PATCH', body: JSON.stringify({ activa: false }), prefer: 'return=minimal' });
-    }
     await sbService(env, `encuestas?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ activa: datos.activa }), prefer: 'return=minimal' });
     return jsonResponse({ ok: true });
   }
