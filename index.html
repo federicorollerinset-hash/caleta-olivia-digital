@@ -300,6 +300,7 @@ main{
 
 /* --- encuesta --- */
 .encuesta-sticky{ position:sticky; top:16px; }
+.enc-contenedor + .enc-contenedor{ margin-top:20px; }
 .encuesta{
   background:var(--card);
   border:1px solid var(--line);
@@ -889,12 +890,25 @@ footer{
     const box = document.getElementById('encuesta-box');
     if(!box) return;
     try{
-      const { data: enc, error: errEnc } = await sb.from('encuestas').select('id,pregunta').eq('activa', true).order('creada', { ascending:false }).limit(1).maybeSingle();
+      const { data: encs, error: errEnc } = await sb.from('encuestas').select('id,pregunta').eq('activa', true).order('creada', { ascending:false });
       if(errEnc) console.error('Encuesta:', errEnc);
-      if(!enc){ box.style.display = 'none'; return; }
-      const { data: ops } = await sb.from('encuesta_opciones').select('id,texto,votos,orden,foto').eq('encuesta_id', enc.id).order('orden');
-      if(!ops || !ops.length){ box.style.display = 'none'; return; }
+      if(!encs || !encs.length){ box.style.display = 'none'; return; }
+      box.innerHTML = '';
       box.style.display = '';
+      // con más de una encuesta el cuadro puede ser más alto que la pantalla: se libera el "pegado"
+      if(encs.length > 1 && box.parentElement) box.parentElement.style.position = 'static';
+      for(const enc of encs){
+        const cont = document.createElement('div');
+        cont.className = 'enc-contenedor';
+        box.appendChild(cont);
+        await pintarEncuesta(enc, cont);
+      }
+    }catch(e){ console.error('Encuesta:', e); box.style.display = 'none'; }
+  }
+  async function pintarEncuesta(enc, box){
+    try{
+      const { data: ops } = await sb.from('encuesta_opciones').select('id,texto,votos,orden,foto').eq('encuesta_id', enc.id).order('orden');
+      if(!ops || !ops.length){ box.remove(); return; }
       const key = 'voto_enc_' + enc.id;
       let miVoto = null;
       try{ miVoto = localStorage.getItem(key); }catch(e){}
